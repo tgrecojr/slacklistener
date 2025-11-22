@@ -14,11 +14,7 @@ logger = logging.getLogger(__name__)
 class BedrockClient:
     """Wrapper for AWS Bedrock API calls."""
 
-    def __init__(
-        self,
-        region: str = "us-east-1",
-        timeout: int = 30
-    ):
+    def __init__(self, region: str = "us-east-1", timeout: int = 30):
         """
         Initialize Bedrock client.
 
@@ -99,7 +95,7 @@ class BedrockClient:
         self,
         text: str,
         role: str = "user",
-        images: Optional[List[Dict[str, Any]]] = None
+        images: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Format a message for Claude API.
@@ -129,26 +125,22 @@ class BedrockClient:
                     mimetype = "image/jpeg"
 
                 if image_data:
-                    content.append({
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": mimetype,
-                            "data": base64.b64encode(image_data).decode("utf-8"),
+                    content.append(
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": mimetype,
+                                "data": base64.b64encode(image_data).decode("utf-8"),
+                            },
                         }
-                    })
+                    )
 
         # Add text
         if text:
-            content.append({
-                "type": "text",
-                "text": text
-            })
+            content.append({"type": "text", "text": text})
 
-        return {
-            "role": role,
-            "content": content
-        }
+        return {"role": role, "content": content}
 
     def create_simple_message(self, text: str, role: str = "user") -> Dict[str, Any]:
         """
@@ -161,7 +153,4 @@ class BedrockClient:
         Returns:
             Formatted message dict
         """
-        return {
-            "role": role,
-            "content": [{"type": "text", "text": text}]
-        }
+        return {"role": role, "content": [{"type": "text", "text": text}]}

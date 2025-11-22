@@ -13,7 +13,9 @@ import boto3
 from botocore.config import Config
 
 
-def test_vision_with_local_image(image_path: str, prompt: str = "What do you see in this image?"):
+def test_vision_with_local_image(
+    image_path: str, prompt: str = "What do you see in this image?"
+):
     """
     Test Claude vision with a local image file.
 
@@ -34,7 +36,7 @@ def test_vision_with_local_image(image_path: str, prompt: str = "What do you see
         ".jpeg": "image/jpeg",
         ".png": "image/png",
         ".webp": "image/webp",
-        ".gif": "image/gif"
+        ".gif": "image/gif",
     }
     mime_type = mime_types.get(ext, "image/jpeg")
 
@@ -67,24 +69,20 @@ def test_vision_with_local_image(image_path: str, prompt: str = "What do you see
                         "source": {
                             "type": "base64",
                             "media_type": mime_type,
-                            "data": image_base64
-                        }
+                            "data": image_base64,
+                        },
                     },
-                    {
-                        "type": "text",
-                        "text": prompt
-                    }
-                ]
+                    {"type": "text", "text": prompt},
+                ],
             }
-        ]
+        ],
     }
 
     try:
         # Call Bedrock
         print("Calling AWS Bedrock...")
         response = bedrock.invoke_model(
-            modelId="anthropic.claude-3-5-sonnet-20241022-v2:0",
-            body=json.dumps(body)
+            modelId="anthropic.claude-3-5-sonnet-20241022-v2:0", body=json.dumps(body)
         )
 
         # Parse response
@@ -119,6 +117,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     image_path = sys.argv[1]
-    prompt = sys.argv[2] if len(sys.argv) > 2 else "What do you see in this image? Describe it in detail."
+    prompt = (
+        sys.argv[2]
+        if len(sys.argv) > 2
+        else "What do you see in this image? Describe it in detail."
+    )
 
     test_vision_with_local_image(image_path, prompt)
