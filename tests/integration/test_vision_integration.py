@@ -78,7 +78,6 @@ class TestVisionIntegration:
         handler = MessageHandler(
             app=app,
             config=vision_app_config,
-            bedrock_client=bedrock_client,
             bot_user_id="U_BOT",
             bot_token="xoxb-test-token",
         )
@@ -176,7 +175,6 @@ class TestVisionIntegration:
         handler = MessageHandler(
             app=app,
             config=vision_app_config,
-            bedrock_client=bedrock_client,
             bot_user_id="U_BOT",
             bot_token="xoxb-test-token",
         )
@@ -247,7 +245,6 @@ class TestVisionIntegration:
         handler = MessageHandler(
             app=app,
             config=vision_app_config,
-            bedrock_client=bedrock_client,
             bot_user_id="U_BOT",
             bot_token="xoxb-test-token",
         )

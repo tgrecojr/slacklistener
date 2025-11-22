@@ -8,10 +8,10 @@ from src.handlers.command_handler import CommandHandler
 
 
 @pytest.fixture
-def command_handler(mock_slack_app, sample_app_config, mock_bedrock_client):
+def command_handler(mock_slack_app, sample_app_config):
     """Create a command handler instance."""
     return CommandHandler(
-        app=mock_slack_app, config=sample_app_config, bedrock_client=mock_bedrock_client
+        app=mock_slack_app, config=sample_app_config
     )
 
 
@@ -22,7 +22,6 @@ class TestCommandHandler:
         """Test handler initialization."""
         assert command_handler.app is not None
         assert command_handler.config is not None
-        assert command_handler.bedrock_client is not None
 
     def test_handle_command_success(self, command_handler, sample_slack_command):
         """Test successful command handling."""

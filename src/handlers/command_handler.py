@@ -5,7 +5,8 @@ from typing import Optional
 
 from slack_bolt import App
 
-from ..services.bedrock_client import BedrockClient
+from ..llm import create_llm_provider
+from ..llm.provider import LLMProvider
 from ..utils.config import AppConfig, SlashCommandConfig
 from ..utils.slack_helpers import format_slack_text
 
@@ -19,7 +20,6 @@ class CommandHandler:
         self,
         app: App,
         config: AppConfig,
-        bedrock_client: BedrockClient,
     ):
         """
         Initialize command handler.
@@ -27,11 +27,9 @@ class CommandHandler:
         Args:
             app: Slack Bolt app
             config: Application configuration
-            bedrock_client: Bedrock client
         """
         self.app = app
         self.config = config
-        self.bedrock_client = bedrock_client
 
     def handle_command(self, ack, command: dict, say) -> None:
         """
@@ -112,16 +110,18 @@ class CommandHandler:
             Response text or None on error
         """
         try:
-            # Create message for Bedrock
-            message = self.bedrock_client.create_simple_message(text)
+            # Create LLM provider from config
+            provider = create_llm_provider(command_config.llm.to_provider_config())
 
-            # Call Bedrock
-            response = self.bedrock_client.invoke_claude(
-                model_id=command_config.bedrock.model_id,
+            # Create simple text message
+            message = {"role": "user", "content": [{"type": "text", "text": text}]}
+
+            # Generate response
+            response = provider.generate_response(
                 messages=[message],
                 system_prompt=command_config.system_prompt,
-                max_tokens=command_config.bedrock.max_tokens,
-                temperature=command_config.bedrock.temperature,
+                max_tokens=command_config.llm.max_tokens,
+                temperature=command_config.llm.temperature,
             )
 
             return response

@@ -1,24 +1,98 @@
 """Configuration loading and validation."""
 
 import logging
+import os
+import re
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 logger = logging.getLogger(__name__)
 
 
-class BedrockConfig(BaseModel):
-    """Bedrock model configuration."""
+def expand_env_vars(config_dict: Any) -> Any:
+    """
+    Recursively expand environment variables in config dictionary.
+
+    Supports ${VAR_NAME} syntax.
+
+    Args:
+        config_dict: Configuration dictionary or value
+
+    Returns:
+        Config with environment variables expanded
+    """
+    if isinstance(config_dict, dict):
+        return {key: expand_env_vars(value) for key, value in config_dict.items()}
+    elif isinstance(config_dict, list):
+        return [expand_env_vars(item) for item in config_dict]
+    elif isinstance(config_dict, str):
+        # Replace ${VAR_NAME} with environment variable value
+        pattern = re.compile(r'\$\{([^}]+)\}')
+
+        def replace_var(match):
+            var_name = match.group(1)
+            return os.getenv(var_name, match.group(0))  # Keep original if not found
+
+        return pattern.sub(replace_var, config_dict)
+    else:
+        return config_dict
+
+
+class LLMConfig(BaseModel):
+    """LLM provider configuration."""
 
     model_config = ConfigDict(extra="allow")  # Allow additional fields
 
-    model_id: str = Field(..., description="Bedrock model ID")
-    region: str = Field(default="us-east-1", description="AWS region")
+    # Provider selection
+    provider: str = Field(
+        default="bedrock", description="LLM provider (bedrock, anthropic, openai)"
+    )
+
+    # Common parameters
     max_tokens: int = Field(default=1024, ge=1, le=100000)
     temperature: float = Field(default=0.7, ge=0.0, le=1.0)
+
+    # Bedrock-specific parameters
+    model_id: Optional[str] = Field(
+        None, description="Model ID (for bedrock or provider-specific)"
+    )
+    region: Optional[str] = Field(None, description="AWS region (for bedrock)")
+    aws_access_key_id: Optional[str] = Field(None, description="AWS access key")
+    aws_secret_access_key: Optional[str] = Field(None, description="AWS secret key")
+
+    # Anthropic/OpenAI-specific parameters
+    model: Optional[str] = Field(None, description="Model name (for anthropic/openai)")
+    api_key: Optional[str] = Field(None, description="API key (for anthropic/openai)")
+
+    def to_provider_config(self) -> dict:
+        """Convert to provider config dict for factory."""
+        config_dict = {"provider": self.provider}
+
+        # Add all non-None fields
+        for field_name in self.model_fields:
+            value = getattr(self, field_name)
+            if value is not None and field_name != "provider":
+                config_dict[field_name] = value
+
+        # Smart mapping: if provider is bedrock and 'model' is set but 'model_id' is not, use 'model' as 'model_id'
+        if self.provider == "bedrock":
+            if "model" in config_dict and "model_id" not in config_dict:
+                config_dict["model_id"] = config_dict["model"]
+                del config_dict["model"]
+        # Similarly for anthropic/openai: if 'model_id' is set but 'model' is not, use 'model_id' as 'model'
+        elif self.provider in ["anthropic", "openai"]:
+            if "model_id" in config_dict and "model" not in config_dict:
+                config_dict["model"] = config_dict["model_id"]
+                del config_dict["model_id"]
+
+        return config_dict
+
+
+# Keep BedrockConfig as alias for backwards compatibility
+BedrockConfig = LLMConfig
 
 
 class ResponseConfig(BaseModel):
@@ -45,11 +119,24 @@ class ChannelConfig(BaseModel):
     require_image: bool = Field(
         default=False, description="Only respond to messages with images"
     )
-    bedrock: BedrockConfig = Field(..., description="Bedrock configuration")
+    llm: Optional[LLMConfig] = Field(None, description="LLM provider configuration")
     system_prompt: str = Field(..., description="System prompt for LLM")
     response: ResponseConfig = Field(
         default_factory=ResponseConfig, description="Response settings"
     )
+
+    # Backwards compatibility fields
+    bedrock: Optional[LLMConfig] = Field(None, description="Deprecated: use 'llm' instead")
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_bedrock_field(cls, data: Any) -> Any:
+        """Handle backwards compatibility for 'bedrock' field name."""
+        if isinstance(data, dict):
+            # If 'bedrock' is provided but not 'llm', copy it over
+            if "bedrock" in data and "llm" not in data:
+                data["llm"] = data["bedrock"]
+        return data
 
     @field_validator("keywords")
     @classmethod
@@ -64,8 +151,21 @@ class SlashCommandConfig(BaseModel):
     command: str = Field(..., description="Command name (e.g., /analyze)")
     description: str = Field(..., description="Command description")
     enabled: bool = Field(default=True, description="Whether this command is enabled")
-    bedrock: BedrockConfig = Field(..., description="Bedrock configuration")
+    llm: Optional[LLMConfig] = Field(None, description="LLM provider configuration")
     system_prompt: str = Field(..., description="System prompt for LLM")
+
+    # Backwards compatibility fields
+    bedrock: Optional[LLMConfig] = Field(None, description="Deprecated: use 'llm' instead")
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_bedrock_field(cls, data: Any) -> Any:
+        """Handle backwards compatibility for 'bedrock' field name."""
+        if isinstance(data, dict):
+            # If 'bedrock' is provided but not 'llm', copy it over
+            if "bedrock" in data and "llm" not in data:
+                data["llm"] = data["bedrock"]
+        return data
 
     @field_validator("command")
     @classmethod
@@ -132,6 +232,9 @@ def load_config(config_path: str = "config/config.yaml") -> AppConfig:
 
     with open(path, "r") as f:
         config_dict = yaml.safe_load(f)
+
+    # Expand environment variables
+    config_dict = expand_env_vars(config_dict)
 
     try:
         config = AppConfig(**config_dict)

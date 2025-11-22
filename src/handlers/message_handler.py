@@ -1,11 +1,12 @@
 """Handler for channel message events."""
 
+import base64
 import logging
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from slack_bolt import App
 
-from ..services.bedrock_client import BedrockClient
+from ..llm import create_llm_provider
 from ..utils.config import AppConfig, ChannelConfig
 from ..utils.slack_helpers import (
     matches_keywords,
@@ -24,7 +25,6 @@ class MessageHandler:
         self,
         app: App,
         config: AppConfig,
-        bedrock_client: BedrockClient,
         bot_user_id: str,
         bot_token: str,
     ):
@@ -34,13 +34,11 @@ class MessageHandler:
         Args:
             app: Slack Bolt app
             config: Application configuration
-            bedrock_client: Bedrock client
             bot_user_id: Bot's user ID
             bot_token: Bot token for file downloads
         """
         self.app = app
         self.config = config
-        self.bedrock_client = bedrock_client
         self.bot_user_id = bot_user_id
         self.bot_token = bot_token
 
@@ -139,6 +137,43 @@ class MessageHandler:
                 return channel
         return None
 
+    def _format_message(self, text: str, images: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Format a message with text and optional images for LLM providers.
+
+        Args:
+            text: Message text
+            images: List of image dicts with 'data' (bytes), 'mimetype' (str), and 'filename' (str)
+
+        Returns:
+            Formatted message dict
+        """
+        content = []
+
+        # Add images if provided
+        if images:
+            for image_info in images:
+                image_data = image_info.get("data")
+                mimetype = image_info.get("mimetype", "image/jpeg")
+
+                if image_data:
+                    content.append(
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": mimetype,
+                                "data": base64.b64encode(image_data).decode("utf-8"),
+                            },
+                        }
+                    )
+
+        # Add text
+        if text:
+            content.append({"type": "text", "text": text})
+
+        return {"role": "user", "content": content}
+
     def _generate_response(
         self,
         text: str,
@@ -157,19 +192,18 @@ class MessageHandler:
             Response text or None on error
         """
         try:
-            # Create message for Bedrock
-            if images:
-                message = self.bedrock_client.format_message(text, images=images)
-            else:
-                message = self.bedrock_client.create_simple_message(text)
+            # Create LLM provider from config
+            provider = create_llm_provider(channel_config.llm.to_provider_config())
 
-            # Call Bedrock
-            response = self.bedrock_client.invoke_claude(
-                model_id=channel_config.bedrock.model_id,
+            # Format message
+            message = self._format_message(text, images)
+
+            # Generate response
+            response = provider.generate_response(
                 messages=[message],
                 system_prompt=channel_config.system_prompt,
-                max_tokens=channel_config.bedrock.max_tokens,
-                temperature=channel_config.bedrock.temperature,
+                max_tokens=channel_config.llm.max_tokens,
+                temperature=channel_config.llm.temperature,
             )
 
             return response

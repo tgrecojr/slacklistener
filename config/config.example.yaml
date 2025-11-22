@@ -1,43 +1,43 @@
 # Slack Listener Configuration Example
 # Copy this file to config.yaml and fill in your values
+#
+# PROVIDER OPTIONS:
+# - bedrock: AWS Bedrock (Claude models via AWS infrastructure)
+# - anthropic: Anthropic Direct API (Claude models, simple API key auth)
+# - openai: OpenAI API (GPT-4, GPT-3.5, etc.)
+#
+# Set API keys in .env file and reference them with ${VARIABLE_NAME}
 
 # Channel configurations
 channels:
-  # Example: Support channel
-  - channel_id: "C01234567"  # Get this from Slack channel details
-    channel_name: "support"  # Human-readable name for logging
+  # Example 1: Using Anthropic Direct API
+  - channel_id: "C01234567"
+    channel_name: "support"
     enabled: true
-
-    # Keywords/phrases that trigger responses
     keywords:
       - "help"
       - "issue"
       - "problem"
       - "error"
-
-    # Case-sensitive matching
     case_sensitive: false
 
-    # Bedrock configuration for this channel
-    bedrock:
-      model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
-      region: "us-east-1"
+    # LLM configuration - Anthropic Direct API
+    llm:
+      provider: "anthropic"
+      model: "claude-3-5-sonnet-20241022"
+      api_key: "${ANTHROPIC_API_KEY}"  # From .env file
       max_tokens: 1024
       temperature: 0.7
 
-    # System prompt/instructions for this channel
     system_prompt: |
       You are a helpful support assistant. When users report issues,
       provide clear, actionable guidance. Be friendly and professional.
 
-    # Response configuration
     response:
-      # Post as thread reply or new message
       thread_reply: true
-      # Add reaction to original message
       add_reaction: "eyes"
 
-  # Example: Sales channel with different model
+  # Example 2: Using AWS Bedrock
   - channel_id: "C02345678"
     channel_name: "sales-inquiries"
     enabled: true
@@ -47,33 +47,62 @@ channels:
       - "demo"
       - "purchase"
     case_sensitive: false
-    bedrock:
-      model_id: "anthropic.claude-3-haiku-20240307-v1:0"  # Faster, cheaper model
+
+    # LLM configuration - AWS Bedrock
+    llm:
+      provider: "bedrock"
+      model_id: "anthropic.claude-3-5-haiku-20241022-v1:0"
       region: "us-east-1"
       max_tokens: 512
       temperature: 0.5
+
     system_prompt: |
       You are a sales assistant. Provide helpful information about
       pricing and product features. Direct complex inquiries to the sales team.
+
     response:
       thread_reply: true
       add_reaction: "moneybag"
 
-  # Example: Image analysis channel (supports JPG, PNG, WebP, GIF)
+  # Example 3: Using OpenAI
   - channel_id: "C03456789"
+    channel_name: "general-chat"
+    enabled: true
+    keywords: ["chatbot", "ai", "question"]
+    case_sensitive: false
+
+    # LLM configuration - OpenAI
+    llm:
+      provider: "openai"
+      model: "gpt-4o"
+      api_key: "${OPENAI_API_KEY}"  # From .env file
+      max_tokens: 1024
+      temperature: 0.7
+
+    system_prompt: |
+      You are a helpful AI assistant in a company chat.
+      Provide clear, concise answers to questions.
+
+    response:
+      thread_reply: true
+      add_reaction: "robot_face"
+
+  # Example 4: Image analysis with Claude (Bedrock or Anthropic)
+  - channel_id: "C04567890"
     channel_name: "design-review"
     enabled: true
-    # Empty keywords means respond to all messages
-    keywords: []
-    # Only respond to messages with images
-    require_image: true
+    keywords: []  # Empty = respond to all messages
+    require_image: true  # Only respond to messages with images
     case_sensitive: false
-    bedrock:
-      # Use Claude 3.5 Sonnet for vision capabilities
-      model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
-      region: "us-east-1"
+
+    # Use Anthropic for vision (also works with Bedrock)
+    llm:
+      provider: "anthropic"
+      model: "claude-3-5-sonnet-20241022"
+      api_key: "${ANTHROPIC_API_KEY}"
       max_tokens: 2048
       temperature: 0.7
+
     system_prompt: |
       You are a professional design reviewer. Analyze uploaded images for:
       - UI/UX design quality and consistency
@@ -81,48 +110,52 @@ channels:
       - Visual hierarchy and layout
       - Brand consistency
       Provide constructive, actionable feedback.
+
     response:
       thread_reply: true
       add_reaction: "eyes"
 
-  # Example: Screenshot debugging channel
-  - channel_id: "C04567890"
+  # Example 5: Screenshot debugging
+  - channel_id: "C05678901"
     channel_name: "bug-screenshots"
     enabled: true
-    keywords:
-      - "bug"
-      - "error"
-      - "broken"
-    # Respond to messages with or without images
-    require_image: false
+    keywords: ["bug", "error", "broken"]
+    require_image: false  # Respond to messages with or without images
     case_sensitive: false
-    bedrock:
+
+    llm:
+      provider: "bedrock"
       model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
       region: "us-east-1"
       max_tokens: 1500
       temperature: 0.5
+
     system_prompt: |
       You are a debugging assistant. When users share screenshots of bugs:
       - Identify the error messages or UI issues visible
       - Suggest potential causes
       - Recommend debugging steps
       If there's text but no image, provide general debugging guidance.
+
     response:
       thread_reply: true
       add_reaction: "bug"
 
-  # Example: Receipt/document processing
-  - channel_id: "C05678901"
+  # Example 6: Receipt/document processing
+  - channel_id: "C06789012"
     channel_name: "receipts"
     enabled: true
     keywords: []
     require_image: true
     case_sensitive: false
-    bedrock:
-      model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
-      region: "us-east-1"
+
+    llm:
+      provider: "anthropic"
+      model: "claude-3-5-sonnet-20241022"
+      api_key: "${ANTHROPIC_API_KEY}"
       max_tokens: 1024
       temperature: 0.3
+
     system_prompt: |
       You are a document processing assistant. Extract key information from receipts/invoices:
       - Vendor name
@@ -130,37 +163,60 @@ channels:
       - Total amount
       - Line items (if clearly visible)
       Format the output as a structured summary.
+
     response:
       thread_reply: true
       add_reaction: "receipt"
 
 # Slash command configurations
 slash_commands:
-  # Example: /analyze command
+  # Example: /analyze command with Anthropic
   - command: "/analyze"
     description: "Analyze text or images with AI"
     enabled: true
-    bedrock:
-      model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
-      region: "us-east-1"
+
+    llm:
+      provider: "anthropic"
+      model: "claude-3-5-sonnet-20241022"
+      api_key: "${ANTHROPIC_API_KEY}"
       max_tokens: 2048
       temperature: 0.7
+
     system_prompt: |
       You are an analytical assistant. Provide thorough analysis
       of the provided content.
 
-  # Example: /summarize command
+  # Example: /summarize command with Bedrock
   - command: "/summarize"
     description: "Summarize conversation or content"
     enabled: true
-    bedrock:
-      model_id: "anthropic.claude-3-haiku-20240307-v1:0"
+
+    llm:
+      provider: "bedrock"
+      model_id: "anthropic.claude-3-5-haiku-20241022-v1:0"
       region: "us-east-1"
       max_tokens: 500
       temperature: 0.3
+
     system_prompt: |
       You are a summarization expert. Create concise, accurate
       summaries of the provided content.
+
+  # Example: /explain command with OpenAI
+  - command: "/explain"
+    description: "Explain complex topics simply"
+    enabled: true
+
+    llm:
+      provider: "openai"
+      model: "gpt-4o"
+      api_key: "${OPENAI_API_KEY}"
+      max_tokens: 1024
+      temperature: 0.7
+
+    system_prompt: |
+      You are an expert explainer. Break down complex topics
+      into simple, easy-to-understand explanations.
 
 # Global settings
 settings:

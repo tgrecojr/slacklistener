@@ -5,7 +5,6 @@ import logging
 from typing import Optional, List, Dict, Any
 
 import boto3
-from botocore.config import Config
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
@@ -14,21 +13,17 @@ logger = logging.getLogger(__name__)
 class BedrockClient:
     """Wrapper for AWS Bedrock API calls."""
 
-    def __init__(self, region: str = "us-east-1", timeout: int = 30):
+    def __init__(self, region: str = "us-east-2", timeout: int = 30):
         """
         Initialize Bedrock client.
 
         Args:
             region: AWS region for Bedrock
-            timeout: Timeout for API calls in seconds
+            timeout: Timeout for API calls in seconds (not currently used)
         """
         self.region = region
-        config = Config(
-            region_name=region,
-            connect_timeout=timeout,
-            read_timeout=timeout,
-        )
-        self.client = boto3.client("bedrock-runtime", config=config)
+        # Create client using region_name parameter directly (matching AWS SDK examples)
+        self.client = boto3.client("bedrock-runtime", region_name=region)
 
     def invoke_claude(
         self,
@@ -54,34 +49,39 @@ class BedrockClient:
             Generated text response or None on error
         """
         try:
-            # Build request body
-            body = {
+            # Format the request payload using the model's native structure
+            # (matching AWS SDK example structure exactly)
+            native_request = {
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": max_tokens,
                 "temperature": temperature,
-                "top_p": top_p,
                 "messages": messages,
             }
 
+            # Add optional parameters
+            if top_p != 0.9:  # Only include if non-default
+                native_request["top_p"] = top_p
+
             if system_prompt:
-                body["system"] = system_prompt
+                native_request["system"] = system_prompt
+
+            # Convert the native request to JSON (matching AWS SDK example)
+            request = json.dumps(native_request)
 
             logger.debug(f"Invoking Bedrock model: {model_id}")
 
-            # Call Bedrock
-            response = self.client.invoke_model(
-                modelId=model_id,
-                body=json.dumps(body),
-            )
+            # Invoke the model with the request (matching AWS SDK example)
+            response = self.client.invoke_model(modelId=model_id, body=request)
 
-            # Parse response
-            response_body = json.loads(response["body"].read())
+            # Decode the response body (matching AWS SDK example)
+            model_response = json.loads(response["body"].read())
 
-            # Extract text from Claude response
-            if "content" in response_body and len(response_body["content"]) > 0:
-                return response_body["content"][0]["text"]
+            # Extract and return the response text (matching AWS SDK example)
+            if "content" in model_response and len(model_response["content"]) > 0:
+                response_text = model_response["content"][0]["text"]
+                return response_text
             else:
-                logger.error(f"Unexpected response format: {response_body}")
+                logger.error(f"Unexpected response format: {model_response}")
                 return None
 
         except ClientError as e:

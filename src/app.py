@@ -11,7 +11,6 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 
 from .handlers.message_handler import MessageHandler
 from .handlers.command_handler import CommandHandler
-from .services.bedrock_client import BedrockClient
 from .utils.config import load_config
 
 # Load environment variables
@@ -70,17 +69,10 @@ def main() -> None:
         logger.error(f"Error getting bot user ID: {e}")
         sys.exit(1)
 
-    # Initialize Bedrock client
-    bedrock_client = BedrockClient(
-        region=os.getenv("AWS_REGION", "us-east-1"),
-        timeout=config.settings.bedrock_timeout,
-    )
-
     # Initialize handlers
     message_handler = MessageHandler(
         app=app,
         config=config,
-        bedrock_client=bedrock_client,
         bot_user_id=bot_user_id,
         bot_token=slack_bot_token,
     )
@@ -88,7 +80,6 @@ def main() -> None:
     command_handler = CommandHandler(
         app=app,
         config=config,
-        bedrock_client=bedrock_client,
     )
 
     # Register message event listener

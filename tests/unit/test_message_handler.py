@@ -8,12 +8,11 @@ from src.handlers.message_handler import MessageHandler
 
 
 @pytest.fixture
-def message_handler(mock_slack_app, sample_app_config, mock_bedrock_client):
+def message_handler(mock_slack_app, sample_app_config):
     """Create a message handler instance."""
     return MessageHandler(
         app=mock_slack_app,
         config=sample_app_config,
-        bedrock_client=mock_bedrock_client,
         bot_user_id="U12345",
         bot_token="xoxb-test-token",
     )
