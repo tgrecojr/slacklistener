@@ -49,6 +49,117 @@ Configure channels to analyze images for various purposes:
 
 See `config/config.example.yaml` for complete examples of image analysis channels.
 
+## Tools & Context Enrichment
+
+The application supports **tools** (also called helpers) that execute before LLM invocation to enrich the context with real-time data. This allows the LLM to provide more accurate and contextual responses.
+
+### How Tools Work
+
+1. Tools are configured in `config.yaml` for slash commands or channels
+2. Before the LLM is invoked, each configured tool executes
+3. Tool results are appended to the system prompt
+4. The enriched prompt is sent to the LLM along with the user's message
+5. The LLM generates a response based on both the user input and tool data
+
+### Available Tools
+
+#### OpenWeatherMap Tool
+
+Fetches current weather and 24-hour forecast from OpenWeatherMap API.
+
+**Configuration:**
+```yaml
+tools:
+  - type: "openweathermap"
+    api_key: "${OPENWEATHERMAP_API_KEY}"
+    location: "Boston,MA,US"  # City, State, Country
+    # OR use coordinates:
+    # latitude: 42.3601
+    # longitude: -71.0589
+    units: "imperial"  # imperial (F), metric (C), or standard (K)
+    language: "en"
+```
+
+**Use Cases:**
+- Weather-aware recommendations (what to wear for a run)
+- Outdoor activity planning
+- Travel preparation
+- Event planning
+
+**Example Integration:**
+```yaml
+slash_commands:
+  - command: "/run"
+    description: "Get running advice based on current weather"
+    llm:
+      provider: "anthropic"
+      model: "claude-3-5-sonnet-20241022"
+      api_key: "${ANTHROPIC_API_KEY}"
+      max_tokens: 1024
+      temperature: 0.7
+    system_prompt: |
+      You are a running coach. Based on the weather data provided,
+      advise on clothing, timing, and safety considerations.
+    tools:
+      - type: "openweathermap"
+        api_key: "${OPENWEATHERMAP_API_KEY}"
+        location: "Boston,MA,US"
+        units: "imperial"
+```
+
+When a user types `/run I want to go for a 5 mile run`, the tool:
+1. Fetches current weather and 24-hour forecast
+2. Formats data (temperature, conditions, humidity, wind)
+3. Appends to system prompt
+4. LLM receives both user input and weather data
+5. LLM provides personalized advice based on actual conditions
+
+### Creating Custom Tools
+
+To create a new tool:
+
+1. **Create tool class** in `src/tools/implementations/`:
+```python
+from ..tool import Tool
+from typing import Dict, Any
+
+class MyCustomTool(Tool):
+    def __init__(self, param1: str, param2: int):
+        self.param1 = param1
+        self.param2 = param2
+
+    def get_name(self) -> str:
+        return "MyCustomTool"
+
+    def execute(self, context: Dict[str, Any]) -> str:
+        # Access user input, timestamp, etc. from context
+        user_input = context.get("user_input")
+
+        # Fetch/compute your data
+        result = self._fetch_data()
+
+        # Return formatted string to enrich prompt
+        return f"Custom Data:\n{result}"
+```
+
+2. **Register in factory** (`src/tools/factory.py`):
+```python
+if tool_type == "mycustom":
+    from .implementations.mycustom import MyCustomTool
+    return MyCustomTool(
+        param1=tool_config.get("param1"),
+        param2=tool_config.get("param2", 42)
+    )
+```
+
+3. **Use in config**:
+```yaml
+tools:
+  - type: "mycustom"
+    param1: "value"
+    param2: 123
+```
+
 ## LLM Provider Options
 
 The application supports three LLM providers. Choose the one that best fits your needs:
@@ -82,10 +193,12 @@ You can configure different providers for different channels or commands!
 
 - Python 3.8 or higher
 - Slack workspace with admin permissions to create apps
-- At least one of the following:
+- At least one of the following LLM providers:
   - **AWS Account** with Bedrock access (for Bedrock provider)
   - **Anthropic API Key** (for Anthropic provider)
   - **OpenAI API Key** (for OpenAI provider)
+- Optional tool API keys:
+  - **OpenWeatherMap API Key** (if using weather tool)
 
 ## Installation
 
@@ -283,6 +396,7 @@ channels:
 - **For Anthropic**: `llm.model`, `llm.api_key`
 - **For OpenAI**: `llm.model`, `llm.api_key`
 - `system_prompt`: Instructions for the AI model
+- `tools`: List of tools to execute before LLM invocation (optional)
 - `response.thread_reply`: Reply in thread vs new message
 - `response.add_reaction`: Emoji reaction to add (optional)
 
@@ -293,6 +407,7 @@ channels:
 - `enabled`: Whether this command is active
 - `llm`: Same as channel LLM config
 - `system_prompt`: Instructions for the AI model
+- `tools`: List of tools to execute before LLM invocation (optional)
 
 ### Global Settings
 
@@ -341,6 +456,11 @@ slacklistener/
 │   │       ├── bedrock_provider.py   # AWS Bedrock implementation
 │   │       ├── anthropic_provider.py # Anthropic Direct API
 │   │       └── openai_provider.py    # OpenAI implementation
+│   ├── tools/
+│   │   ├── tool.py              # Tool base class
+│   │   ├── factory.py           # Tool factory
+│   │   └── implementations/
+│   │       └── openweathermap.py     # OpenWeatherMap tool
 │   ├── services/
 │   │   └── bedrock_client.py    # Legacy Bedrock client (deprecated)
 │   ├── utils/
