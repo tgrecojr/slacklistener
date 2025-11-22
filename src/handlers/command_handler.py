@@ -1,12 +1,14 @@
 """Handler for slash commands."""
 
 import logging
+from datetime import datetime
 from typing import Optional
 
 from slack_bolt import App
 
 from ..llm import create_llm_provider
 from ..llm.provider import LLMProvider
+from ..tools.factory import create_tool
 from ..utils.config import AppConfig, SlashCommandConfig
 from ..utils.slack_helpers import format_slack_text
 
@@ -72,8 +74,10 @@ class CommandHandler:
 
             logger.info(f"Processing command: {command_text}")
 
-            # Generate response
-            response_text = self._generate_response(user_text, command_config)
+            # Generate response with context
+            response_text = self._generate_response(
+                user_text, command_config, command
+            )
 
             if response_text:
                 formatted_text = format_slack_text(response_text)
@@ -98,6 +102,7 @@ class CommandHandler:
         self,
         text: str,
         command_config: SlashCommandConfig,
+        command: dict,
     ) -> Optional[str]:
         """
         Generate LLM response for command.
@@ -105,11 +110,43 @@ class CommandHandler:
         Args:
             text: User's text
             command_config: Command configuration
+            command: Full command payload for context
 
         Returns:
             Response text or None on error
         """
         try:
+            # Execute tools and collect enrichment data
+            tool_results = []
+            if command_config.tools:
+                logger.info(f"Executing {len(command_config.tools)} tool(s)")
+
+                # Build context for tools
+                tool_context = {
+                    "user_input": text,
+                    "user_id": command.get("user_id"),
+                    "channel_id": command.get("channel_id"),
+                    "timestamp": datetime.now().isoformat(),
+                }
+
+                for tool_config in command_config.tools:
+                    try:
+                        tool = create_tool(tool_config)
+                        logger.info(f"Executing tool: {tool.get_name()}")
+                        result = tool.execute(tool_context)
+                        tool_results.append(f"\n--- {tool.get_name()} Data ---\n{result}")
+                        logger.info(f"Tool {tool.get_name()} completed successfully")
+                    except Exception as e:
+                        logger.error(f"Error executing tool {tool_config.get('type')}: {e}", exc_info=True)
+                        # Continue with other tools even if one fails
+
+            # Build system prompt with tool enrichment
+            system_prompt = command_config.system_prompt
+            if tool_results:
+                enrichment = "\n".join(tool_results)
+                system_prompt = f"{command_config.system_prompt}\n\n{enrichment}"
+                logger.debug(f"Enriched system prompt with {len(tool_results)} tool result(s)")
+
             # Create LLM provider from config
             provider = create_llm_provider(command_config.llm.to_provider_config())
 
@@ -119,7 +156,7 @@ class CommandHandler:
             # Generate response
             response = provider.generate_response(
                 messages=[message],
-                system_prompt=command_config.system_prompt,
+                system_prompt=system_prompt,
                 max_tokens=command_config.llm.max_tokens,
                 temperature=command_config.llm.temperature,
             )

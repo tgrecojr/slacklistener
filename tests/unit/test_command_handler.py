@@ -1,6 +1,6 @@
 """Tests for slash command handler."""
 
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -23,8 +23,14 @@ class TestCommandHandler:
         assert command_handler.app is not None
         assert command_handler.config is not None
 
-    def test_handle_command_success(self, command_handler, sample_slack_command):
+    @patch("src.handlers.command_handler.create_llm_provider")
+    def test_handle_command_success(self, mock_create_provider, command_handler, sample_slack_command):
         """Test successful command handling."""
+        # Mock LLM provider
+        mock_provider = Mock()
+        mock_provider.generate_response.return_value = "This is a test response from Claude."
+        mock_create_provider.return_value = mock_provider
+
         ack = Mock()
         say = Mock()
 
@@ -101,10 +107,13 @@ class TestCommandHandler:
         response_text = say.call_args.args[0]
         assert "not configured" in response_text.lower()
 
-    def test_handle_command_bedrock_error(self, command_handler, sample_slack_command):
-        """Test handling Bedrock errors."""
-        # Make bedrock return None (error)
-        command_handler.bedrock_client.invoke_claude.return_value = None
+    @patch("src.handlers.command_handler.create_llm_provider")
+    def test_handle_command_bedrock_error(self, mock_create_provider, command_handler, sample_slack_command):
+        """Test handling LLM provider errors."""
+        # Mock LLM provider to return None (error)
+        mock_provider = Mock()
+        mock_provider.generate_response.return_value = None
+        mock_create_provider.return_value = mock_provider
 
         ack = Mock()
         say = Mock()
@@ -119,12 +128,13 @@ class TestCommandHandler:
         response_text = say.call_args.args[0]
         assert "error" in response_text.lower()
 
-    def test_handle_command_exception(self, command_handler, sample_slack_command):
+    @patch("src.handlers.command_handler.create_llm_provider")
+    def test_handle_command_exception(self, mock_create_provider, command_handler, sample_slack_command):
         """Test handling unexpected exceptions."""
-        # Make bedrock raise exception
-        command_handler.bedrock_client.invoke_claude.side_effect = Exception(
-            "Test error"
-        )
+        # Mock LLM provider to raise exception
+        mock_provider = Mock()
+        mock_provider.generate_response.side_effect = Exception("Test error")
+        mock_create_provider.return_value = mock_provider
 
         ack = Mock()
         say = Mock()
@@ -148,28 +158,39 @@ class TestCommandHandler:
         config = command_handler._get_command_config("/nonexistent")
         assert config is None
 
-    def test_generate_response(self, command_handler, sample_command_config):
+    @patch("src.handlers.command_handler.create_llm_provider")
+    def test_generate_response(self, mock_create_provider, command_handler, sample_command_config):
         """Test response generation."""
+        # Mock LLM provider
+        mock_provider = Mock()
+        mock_provider.generate_response.return_value = "This is a test response from Claude."
+        mock_create_provider.return_value = mock_provider
+
+        command = {"user_id": "U123", "channel_id": "C123"}
         response = command_handler._generate_response(
-            "Test question", sample_command_config
+            "Test question", sample_command_config, command
         )
 
         assert response == "This is a test response from Claude."
-        command_handler.bedrock_client.invoke_claude.assert_called_once()
+        mock_provider.generate_response.assert_called_once()
 
+    @patch("src.handlers.command_handler.create_llm_provider")
     def test_generate_response_uses_correct_params(
-        self, command_handler, sample_command_config
+        self, mock_create_provider, command_handler, sample_command_config
     ):
         """Test that response generation uses correct parameters."""
-        command_handler._generate_response("Test", sample_command_config)
+        # Mock LLM provider
+        mock_provider = Mock()
+        mock_provider.generate_response.return_value = "Test response"
+        mock_create_provider.return_value = mock_provider
 
-        call_args = command_handler.bedrock_client.invoke_claude.call_args
+        command = {"user_id": "U123", "channel_id": "C123"}
+        command_handler._generate_response("Test", sample_command_config, command)
 
-        assert call_args.kwargs["model_id"] == sample_command_config.bedrock.model_id
-        assert (
-            call_args.kwargs["max_tokens"] == sample_command_config.bedrock.max_tokens
-        )
-        assert (
-            call_args.kwargs["temperature"] == sample_command_config.bedrock.temperature
-        )
-        assert call_args.kwargs["system_prompt"] == sample_command_config.system_prompt
+        # Verify provider was called with correct parameters
+        mock_provider.generate_response.assert_called_once()
+        call_kwargs = mock_provider.generate_response.call_args.kwargs
+
+        assert call_kwargs["max_tokens"] == sample_command_config.llm.max_tokens
+        assert call_kwargs["temperature"] == sample_command_config.llm.temperature
+        assert call_kwargs["system_prompt"] == sample_command_config.system_prompt

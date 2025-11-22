@@ -218,6 +218,38 @@ slash_commands:
       You are an expert explainer. Break down complex topics
       into simple, easy-to-understand explanations.
 
+  # Example: /run command with OpenWeatherMap tool integration
+  - command: "/run"
+    description: "Get personalized running advice based on current weather"
+    enabled: true
+
+    llm:
+      provider: "anthropic"
+      model: "claude-3-5-sonnet-20241022"
+      api_key: "${ANTHROPIC_API_KEY}"
+      max_tokens: 1024
+      temperature: 0.7
+
+    system_prompt: |
+      You are a running and fitness coach. Based on the current and forecasted weather,
+      provide advice on:
+      - What to wear for the run
+      - Best time to run today
+      - Hydration recommendations
+      - Any safety considerations
+      Keep responses concise and actionable.
+
+    # Tools to execute before LLM invocation
+    tools:
+      - type: "openweathermap"
+        api_key: "${OPENWEATHERMAP_API_KEY}"
+        location: "Boston,MA,US"  # City, State, Country
+        # Alternatively, use coordinates:
+        # latitude: 42.3601
+        # longitude: -71.0589
+        units: "imperial"  # imperial (F), metric (C), or standard (K)
+        language: "en"
+
 # Global settings
 settings:
   # Log level: DEBUG, INFO, WARNING, ERROR

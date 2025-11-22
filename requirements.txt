@@ -19,3 +19,4 @@ pydantic>=2.10.5
 
 # Utilities
 python-dotenv>=1.0.1
+requests>=2.32.0

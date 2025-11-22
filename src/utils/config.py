@@ -4,7 +4,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -72,7 +72,7 @@ class LLMConfig(BaseModel):
         config_dict = {"provider": self.provider}
 
         # Add all non-None fields
-        for field_name in self.model_fields:
+        for field_name in self.__class__.model_fields:
             value = getattr(self, field_name)
             if value is not None and field_name != "provider":
                 config_dict[field_name] = value
@@ -121,6 +121,9 @@ class ChannelConfig(BaseModel):
     )
     llm: Optional[LLMConfig] = Field(None, description="LLM provider configuration")
     system_prompt: str = Field(..., description="System prompt for LLM")
+    tools: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Tools to execute before LLM invocation"
+    )
     response: ResponseConfig = Field(
         default_factory=ResponseConfig, description="Response settings"
     )
@@ -153,6 +156,9 @@ class SlashCommandConfig(BaseModel):
     enabled: bool = Field(default=True, description="Whether this command is enabled")
     llm: Optional[LLMConfig] = Field(None, description="LLM provider configuration")
     system_prompt: str = Field(..., description="System prompt for LLM")
+    tools: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Tools to execute before LLM invocation"
+    )
 
     # Backwards compatibility fields
     bedrock: Optional[LLMConfig] = Field(None, description="Deprecated: use 'llm' instead")
