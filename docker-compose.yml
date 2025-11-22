@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  slacklistener:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: slacklistener
+    restart: unless-stopped
+
+    # Environment variables from .env file
+    env_file:
+      - .env
+
+    # Mount config as volume for easy updates
+    volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
+
+    # AWS credentials (choose one method):
+    # Method 1: Mount AWS credentials from host
+    # volumes:
+    #   - ~/.aws:/root/.aws:ro
+
+    # Method 2: Use environment variables in .env
+    # Already loaded via env_file above

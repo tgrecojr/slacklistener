@@ -1,0 +1,14 @@
+# Slack SDK
+slack-bolt==1.18.0
+slack-sdk==3.23.0
+
+# AWS Bedrock
+boto3==1.34.0
+botocore==1.34.0
+
+# Configuration
+pyyaml==6.0.1
+pydantic==2.5.0
+
+# Utilities
+python-dotenv==1.0.0

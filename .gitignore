@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+.serena
+.python-version
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs (if redirected to files manually)
+*.log
+
+# Config (may contain sensitive data)
+config/config.yaml
+!config/config.example.yaml
+
+# OS
+.DS_Store
+Thumbs.db

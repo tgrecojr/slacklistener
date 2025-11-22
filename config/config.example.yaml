@@ -1,0 +1,180 @@
+# Slack Listener Configuration Example
+# Copy this file to config.yaml and fill in your values
+
+# Channel configurations
+channels:
+  # Example: Support channel
+  - channel_id: "C01234567"  # Get this from Slack channel details
+    channel_name: "support"  # Human-readable name for logging
+    enabled: true
+
+    # Keywords/phrases that trigger responses
+    keywords:
+      - "help"
+      - "issue"
+      - "problem"
+      - "error"
+
+    # Case-sensitive matching
+    case_sensitive: false
+
+    # Bedrock configuration for this channel
+    bedrock:
+      model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+      region: "us-east-1"
+      max_tokens: 1024
+      temperature: 0.7
+
+    # System prompt/instructions for this channel
+    system_prompt: |
+      You are a helpful support assistant. When users report issues,
+      provide clear, actionable guidance. Be friendly and professional.
+
+    # Response configuration
+    response:
+      # Post as thread reply or new message
+      thread_reply: true
+      # Add reaction to original message
+      add_reaction: "eyes"
+
+  # Example: Sales channel with different model
+  - channel_id: "C02345678"
+    channel_name: "sales-inquiries"
+    enabled: true
+    keywords:
+      - "pricing"
+      - "quote"
+      - "demo"
+      - "purchase"
+    case_sensitive: false
+    bedrock:
+      model_id: "anthropic.claude-3-haiku-20240307-v1:0"  # Faster, cheaper model
+      region: "us-east-1"
+      max_tokens: 512
+      temperature: 0.5
+    system_prompt: |
+      You are a sales assistant. Provide helpful information about
+      pricing and product features. Direct complex inquiries to the sales team.
+    response:
+      thread_reply: true
+      add_reaction: "moneybag"
+
+  # Example: Image analysis channel (supports JPG, PNG, WebP, GIF)
+  - channel_id: "C03456789"
+    channel_name: "design-review"
+    enabled: true
+    # Empty keywords means respond to all messages
+    keywords: []
+    # Only respond to messages with images
+    require_image: true
+    case_sensitive: false
+    bedrock:
+      # Use Claude 3.5 Sonnet for vision capabilities
+      model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+      region: "us-east-1"
+      max_tokens: 2048
+      temperature: 0.7
+    system_prompt: |
+      You are a professional design reviewer. Analyze uploaded images for:
+      - UI/UX design quality and consistency
+      - Accessibility issues (color contrast, font sizes)
+      - Visual hierarchy and layout
+      - Brand consistency
+      Provide constructive, actionable feedback.
+    response:
+      thread_reply: true
+      add_reaction: "eyes"
+
+  # Example: Screenshot debugging channel
+  - channel_id: "C04567890"
+    channel_name: "bug-screenshots"
+    enabled: true
+    keywords:
+      - "bug"
+      - "error"
+      - "broken"
+    # Respond to messages with or without images
+    require_image: false
+    case_sensitive: false
+    bedrock:
+      model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+      region: "us-east-1"
+      max_tokens: 1500
+      temperature: 0.5
+    system_prompt: |
+      You are a debugging assistant. When users share screenshots of bugs:
+      - Identify the error messages or UI issues visible
+      - Suggest potential causes
+      - Recommend debugging steps
+      If there's text but no image, provide general debugging guidance.
+    response:
+      thread_reply: true
+      add_reaction: "bug"
+
+  # Example: Receipt/document processing
+  - channel_id: "C05678901"
+    channel_name: "receipts"
+    enabled: true
+    keywords: []
+    require_image: true
+    case_sensitive: false
+    bedrock:
+      model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+      region: "us-east-1"
+      max_tokens: 1024
+      temperature: 0.3
+    system_prompt: |
+      You are a document processing assistant. Extract key information from receipts/invoices:
+      - Vendor name
+      - Date
+      - Total amount
+      - Line items (if clearly visible)
+      Format the output as a structured summary.
+    response:
+      thread_reply: true
+      add_reaction: "receipt"
+
+# Slash command configurations
+slash_commands:
+  # Example: /analyze command
+  - command: "/analyze"
+    description: "Analyze text or images with AI"
+    enabled: true
+    bedrock:
+      model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+      region: "us-east-1"
+      max_tokens: 2048
+      temperature: 0.7
+    system_prompt: |
+      You are an analytical assistant. Provide thorough analysis
+      of the provided content.
+
+  # Example: /summarize command
+  - command: "/summarize"
+    description: "Summarize conversation or content"
+    enabled: true
+    bedrock:
+      model_id: "anthropic.claude-3-haiku-20240307-v1:0"
+      region: "us-east-1"
+      max_tokens: 500
+      temperature: 0.3
+    system_prompt: |
+      You are a summarization expert. Create concise, accurate
+      summaries of the provided content.
+
+# Global settings
+settings:
+  # Log level: DEBUG, INFO, WARNING, ERROR
+  log_level: "INFO"
+
+  # Maximum message length to process (characters)
+  max_message_length: 10000
+
+  # Timeout for Bedrock API calls (seconds)
+  bedrock_timeout: 30
+
+  # Whether to process bot messages
+  ignore_bot_messages: true
+
+  # Whether to process messages from the app itself
+  ignore_self: true
