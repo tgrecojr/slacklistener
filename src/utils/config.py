@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -13,13 +13,12 @@ logger = logging.getLogger(__name__)
 class BedrockConfig(BaseModel):
     """Bedrock model configuration."""
 
+    model_config = ConfigDict(extra="allow")  # Allow additional fields
+
     model_id: str = Field(..., description="Bedrock model ID")
     region: str = Field(default="us-east-1", description="AWS region")
     max_tokens: int = Field(default=1024, ge=1, le=100000)
     temperature: float = Field(default=0.7, ge=0.0, le=1.0)
-
-    class Config:
-        extra = "allow"  # Allow additional fields
 
 
 class ResponseConfig(BaseModel):
