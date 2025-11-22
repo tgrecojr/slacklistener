@@ -27,7 +27,9 @@ class TestMessageHandler:
         assert message_handler.bot_user_id == "U12345"
         assert message_handler.bot_token == "xoxb-test-token"
 
-    def test_handle_message_with_keyword(self, message_handler, sample_slack_message_event):
+    def test_handle_message_with_keyword(
+        self, message_handler, sample_slack_message_event
+    ):
         """Test handling message with matching keyword."""
         say = Mock()
         client = Mock()
@@ -112,7 +114,9 @@ class TestMessageHandler:
         # Should be ignored
         say.assert_not_called()
 
-    def test_handle_message_thread_reply(self, message_handler, sample_slack_message_event):
+    def test_handle_message_thread_reply(
+        self, message_handler, sample_slack_message_event
+    ):
         """Test replying in thread."""
         say = Mock()
         client = Mock()
@@ -143,7 +147,11 @@ class TestMessageHandler:
 
     @patch("src.handlers.message_handler.extract_message_images")
     def test_handle_message_with_image(
-        self, mock_extract_images, message_handler, sample_slack_image_event, sample_image_info
+        self,
+        mock_extract_images,
+        message_handler,
+        sample_slack_image_event,
+        sample_image_info,
     ):
         """Test handling message with image."""
         # Mock image extraction

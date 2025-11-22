@@ -25,7 +25,9 @@ class ResponseConfig(BaseModel):
     """Response behavior configuration."""
 
     thread_reply: bool = Field(default=True, description="Reply in thread")
-    add_reaction: Optional[str] = Field(default=None, description="Reaction emoji to add")
+    add_reaction: Optional[str] = Field(
+        default=None, description="Reaction emoji to add"
+    )
 
 
 class ChannelConfig(BaseModel):
@@ -34,12 +36,20 @@ class ChannelConfig(BaseModel):
     channel_id: str = Field(..., description="Slack channel ID")
     channel_name: str = Field(..., description="Human-readable channel name")
     enabled: bool = Field(default=True, description="Whether this channel is enabled")
-    keywords: List[str] = Field(default_factory=list, description="Keywords to trigger on")
-    case_sensitive: bool = Field(default=False, description="Case-sensitive keyword matching")
-    require_image: bool = Field(default=False, description="Only respond to messages with images")
+    keywords: List[str] = Field(
+        default_factory=list, description="Keywords to trigger on"
+    )
+    case_sensitive: bool = Field(
+        default=False, description="Case-sensitive keyword matching"
+    )
+    require_image: bool = Field(
+        default=False, description="Only respond to messages with images"
+    )
     bedrock: BedrockConfig = Field(..., description="Bedrock configuration")
     system_prompt: str = Field(..., description="System prompt for LLM")
-    response: ResponseConfig = Field(default_factory=ResponseConfig, description="Response settings")
+    response: ResponseConfig = Field(
+        default_factory=ResponseConfig, description="Response settings"
+    )
 
     @field_validator("keywords")
     @classmethod
@@ -70,20 +80,30 @@ class GlobalSettings(BaseModel):
     """Global application settings."""
 
     log_level: str = Field(default="INFO", description="Logging level")
-    max_message_length: int = Field(default=10000, ge=1, description="Max message length to process")
-    bedrock_timeout: int = Field(default=30, ge=1, le=300, description="Bedrock API timeout")
-    ignore_bot_messages: bool = Field(default=True, description="Ignore messages from bots")
+    max_message_length: int = Field(
+        default=10000, ge=1, description="Max message length to process"
+    )
+    bedrock_timeout: int = Field(
+        default=30, ge=1, le=300, description="Bedrock API timeout"
+    )
+    ignore_bot_messages: bool = Field(
+        default=True, description="Ignore messages from bots"
+    )
     ignore_self: bool = Field(default=True, description="Ignore own messages")
 
 
 class AppConfig(BaseModel):
     """Main application configuration."""
 
-    channels: List[ChannelConfig] = Field(default_factory=list, description="Channel configurations")
+    channels: List[ChannelConfig] = Field(
+        default_factory=list, description="Channel configurations"
+    )
     slash_commands: List[SlashCommandConfig] = Field(
         default_factory=list, description="Slash command configurations"
     )
-    settings: GlobalSettings = Field(default_factory=GlobalSettings, description="Global settings")
+    settings: GlobalSettings = Field(
+        default_factory=GlobalSettings, description="Global settings"
+    )
 
 
 def load_config(config_path: str = "config/config.yaml") -> AppConfig:

@@ -11,6 +11,12 @@ ENV/
 .serena
 .python-version
 
+# Testing
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
 # Environment files
 .env
 .env.local

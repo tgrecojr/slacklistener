@@ -123,7 +123,9 @@ class TestCommandHandler:
     def test_handle_command_exception(self, command_handler, sample_slack_command):
         """Test handling unexpected exceptions."""
         # Make bedrock raise exception
-        command_handler.bedrock_client.invoke_claude.side_effect = Exception("Test error")
+        command_handler.bedrock_client.invoke_claude.side_effect = Exception(
+            "Test error"
+        )
 
         ack = Mock()
         say = Mock()
@@ -149,18 +151,26 @@ class TestCommandHandler:
 
     def test_generate_response(self, command_handler, sample_command_config):
         """Test response generation."""
-        response = command_handler._generate_response("Test question", sample_command_config)
+        response = command_handler._generate_response(
+            "Test question", sample_command_config
+        )
 
         assert response == "This is a test response from Claude."
         command_handler.bedrock_client.invoke_claude.assert_called_once()
 
-    def test_generate_response_uses_correct_params(self, command_handler, sample_command_config):
+    def test_generate_response_uses_correct_params(
+        self, command_handler, sample_command_config
+    ):
         """Test that response generation uses correct parameters."""
         command_handler._generate_response("Test", sample_command_config)
 
         call_args = command_handler.bedrock_client.invoke_claude.call_args
 
         assert call_args.kwargs["model_id"] == sample_command_config.bedrock.model_id
-        assert call_args.kwargs["max_tokens"] == sample_command_config.bedrock.max_tokens
-        assert call_args.kwargs["temperature"] == sample_command_config.bedrock.temperature
+        assert (
+            call_args.kwargs["max_tokens"] == sample_command_config.bedrock.max_tokens
+        )
+        assert (
+            call_args.kwargs["temperature"] == sample_command_config.bedrock.temperature
+        )
         assert call_args.kwargs["system_prompt"] == sample_command_config.system_prompt

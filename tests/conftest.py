@@ -173,7 +173,12 @@ def mock_bedrock_response():
             read=Mock(
                 return_value=json.dumps(
                     {
-                        "content": [{"type": "text", "text": "This is a test response from Claude."}],
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "This is a test response from Claude.",
+                            }
+                        ],
                         "stop_reason": "end_turn",
                     }
                 ).encode()

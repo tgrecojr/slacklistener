@@ -9,7 +9,13 @@ import responses
 
 from src.handlers.message_handler import MessageHandler
 from src.services.bedrock_client import BedrockClient
-from src.utils.config import AppConfig, ChannelConfig, BedrockConfig, ResponseConfig, GlobalSettings
+from src.utils.config import (
+    AppConfig,
+    ChannelConfig,
+    BedrockConfig,
+    ResponseConfig,
+    GlobalSettings,
+)
 
 
 @pytest.fixture
@@ -48,7 +54,11 @@ class TestVisionIntegration:
     @responses.activate
     @patch("src.services.bedrock_client.boto3")
     def test_complete_image_workflow(
-        self, mock_boto3, vision_app_config, sample_image_bytes, mock_bedrock_vision_response
+        self,
+        mock_boto3,
+        vision_app_config,
+        sample_image_bytes,
+        mock_bedrock_vision_response,
     ):
         """Test complete workflow: Slack image -> Bedrock vision -> Response."""
         # Setup Bedrock mock
@@ -133,7 +143,10 @@ class TestVisionIntegration:
         assert text_content["text"] == "Please review this design"
 
         # Verify system prompt
-        assert body["system"] == "You are a design review expert. Analyze the provided image in detail."
+        assert (
+            body["system"]
+            == "You are a design review expert. Analyze the provided image in detail."
+        )
 
         # Verify response was sent
         say.assert_called_once()
@@ -144,7 +157,11 @@ class TestVisionIntegration:
     @responses.activate
     @patch("src.services.bedrock_client.boto3")
     def test_multiple_images_workflow(
-        self, mock_boto3, vision_app_config, sample_image_bytes, mock_bedrock_vision_response
+        self,
+        mock_boto3,
+        vision_app_config,
+        sample_image_bytes,
+        mock_bedrock_vision_response,
     ):
         """Test handling multiple images in one message."""
         # Setup Bedrock mock
@@ -187,7 +204,9 @@ class TestVisionIntegration:
 
         # Mock downloads
         for file in event["files"]:
-            responses.add(responses.GET, file["url_private"], body=sample_image_bytes, status=200)
+            responses.add(
+                responses.GET, file["url_private"], body=sample_image_bytes, status=200
+            )
 
         say = Mock()
         client = Mock()
@@ -216,7 +235,8 @@ class TestVisionIntegration:
         from botocore.exceptions import ClientError
 
         mock_bedrock.invoke_model.side_effect = ClientError(
-            {"Error": {"Code": "ValidationException", "Message": "Invalid input"}}, "InvokeModel"
+            {"Error": {"Code": "ValidationException", "Message": "Invalid input"}},
+            "InvokeModel",
         )
         mock_boto3.client.return_value = mock_bedrock
 

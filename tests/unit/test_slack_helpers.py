@@ -59,7 +59,10 @@ class TestSlackFileDownload:
 
         assert result == sample_image_bytes
         assert len(responses.calls) == 1
-        assert responses.calls[0].request.headers["Authorization"] == "Bearer xoxb-test-token"
+        assert (
+            responses.calls[0].request.headers["Authorization"]
+            == "Bearer xoxb-test-token"
+        )
 
     @responses.activate
     def test_download_slack_file_error(self):
@@ -86,13 +89,17 @@ class TestExtractMessageImages:
     """Tests for image extraction from Slack messages."""
 
     @responses.activate
-    def test_extract_message_images_success(self, sample_slack_image_event, sample_image_bytes):
+    def test_extract_message_images_success(
+        self, sample_slack_image_event, sample_image_bytes
+    ):
         """Test successful image extraction."""
         # Mock file download
         url = sample_slack_image_event["files"][0]["url_private"]
         responses.add(responses.GET, url, body=sample_image_bytes, status=200)
 
-        images = extract_message_images(sample_slack_image_event, Mock(), "xoxb-test-token")
+        images = extract_message_images(
+            sample_slack_image_event, Mock(), "xoxb-test-token"
+        )
 
         assert len(images) == 1
         assert images[0]["data"] == sample_image_bytes
@@ -101,7 +108,9 @@ class TestExtractMessageImages:
 
     def test_extract_message_images_no_files(self, sample_slack_message_event):
         """Test message with no files."""
-        images = extract_message_images(sample_slack_message_event, Mock(), "xoxb-test-token")
+        images = extract_message_images(
+            sample_slack_message_event, Mock(), "xoxb-test-token"
+        )
 
         assert len(images) == 0
 
@@ -110,8 +119,14 @@ class TestExtractMessageImages:
         event = {
             "type": "message",
             "files": [
-                {"mimetype": "application/pdf", "url_private": "https://example.com/doc.pdf"},
-                {"mimetype": "text/plain", "url_private": "https://example.com/text.txt"},
+                {
+                    "mimetype": "application/pdf",
+                    "url_private": "https://example.com/doc.pdf",
+                },
+                {
+                    "mimetype": "text/plain",
+                    "url_private": "https://example.com/text.txt",
+                },
             ],
         }
 
@@ -145,7 +160,9 @@ class TestExtractMessageImages:
 
         # Mock all downloads
         for file in event["files"]:
-            responses.add(responses.GET, file["url_private"], body=sample_image_bytes, status=200)
+            responses.add(
+                responses.GET, file["url_private"], body=sample_image_bytes, status=200
+            )
 
         images = extract_message_images(event, Mock(), "xoxb-test-token")
 
@@ -174,7 +191,12 @@ class TestExtractMessageImages:
         }
 
         # First succeeds, second fails
-        responses.add(responses.GET, event["files"][0]["url_private"], body=sample_image_bytes, status=200)
+        responses.add(
+            responses.GET,
+            event["files"][0]["url_private"],
+            body=sample_image_bytes,
+            status=200,
+        )
         responses.add(responses.GET, event["files"][1]["url_private"], status=404)
 
         images = extract_message_images(event, Mock(), "xoxb-test-token")
@@ -204,7 +226,12 @@ class TestShouldIgnoreMessage:
 
     def test_should_ignore_system_subtypes(self):
         """Test ignoring system message subtypes."""
-        subtypes = ["message_changed", "message_deleted", "channel_join", "channel_leave"]
+        subtypes = [
+            "message_changed",
+            "message_deleted",
+            "channel_join",
+            "channel_leave",
+        ]
 
         for subtype in subtypes:
             event = {"user": "U12345", "subtype": subtype}

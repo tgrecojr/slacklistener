@@ -9,9 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def matches_keywords(
-    text: str,
-    keywords: List[str],
-    case_sensitive: bool = False
+    text: str, keywords: List[str], case_sensitive: bool = False
 ) -> bool:
     """
     Check if text contains any of the keywords.
@@ -61,9 +59,7 @@ def download_slack_file(url: str, token: str) -> Optional[bytes]:
 
 
 def extract_message_images(
-    event: Dict[str, Any],
-    client: Any,
-    bot_token: str
+    event: Dict[str, Any], client: Any, bot_token: str
 ) -> List[Dict[str, Any]]:
     """
     Extract images from a Slack message event.
@@ -90,12 +86,16 @@ def extract_message_images(
             if url:
                 image_data = download_slack_file(url, bot_token)
                 if image_data:
-                    images.append({
-                        "data": image_data,
-                        "mimetype": mimetype,
-                        "filename": file_obj.get("name", "image")
-                    })
-                    logger.debug(f"Downloaded image: {file_obj.get('name')} ({mimetype})")
+                    images.append(
+                        {
+                            "data": image_data,
+                            "mimetype": mimetype,
+                            "filename": file_obj.get("name", "image"),
+                        }
+                    )
+                    logger.debug(
+                        f"Downloaded image: {file_obj.get('name')} ({mimetype})"
+                    )
 
     return images
 
@@ -104,7 +104,7 @@ def should_ignore_message(
     event: Dict[str, Any],
     bot_user_id: str,
     ignore_bots: bool = True,
-    ignore_self: bool = True
+    ignore_self: bool = True,
 ) -> bool:
     """
     Determine if a message should be ignored.
@@ -129,7 +129,12 @@ def should_ignore_message(
 
     # Ignore message subtypes we don't care about
     subtype = event.get("subtype")
-    if subtype in ["message_changed", "message_deleted", "channel_join", "channel_leave"]:
+    if subtype in [
+        "message_changed",
+        "message_deleted",
+        "channel_join",
+        "channel_leave",
+    ]:
         return True
 
     return False
@@ -150,4 +155,4 @@ def format_slack_text(text: str, max_length: int = 3000) -> str:
         return text
 
     # Truncate and add indicator
-    return text[:max_length - 50] + "\n\n... (response truncated)"
+    return text[: max_length - 50] + "\n\n... (response truncated)"

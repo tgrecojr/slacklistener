@@ -71,7 +71,11 @@ def test_format_message_multiple_images(sample_image_bytes):
     client = BedrockClient()
     images = [
         {"data": sample_image_bytes, "mimetype": "image/png", "filename": "image1.png"},
-        {"data": sample_image_bytes, "mimetype": "image/jpeg", "filename": "image2.jpg"},
+        {
+            "data": sample_image_bytes,
+            "mimetype": "image/jpeg",
+            "filename": "image2.jpg",
+        },
     ]
 
     message = client.format_message("Describe these images", images=images)
@@ -117,7 +121,9 @@ def test_invoke_claude_success(mock_boto3, bedrock_client, mock_bedrock_response
 
 
 @patch("src.services.bedrock_client.boto3")
-def test_invoke_claude_with_vision(mock_boto3, bedrock_client, mock_bedrock_vision_response, sample_image_info):
+def test_invoke_claude_with_vision(
+    mock_boto3, bedrock_client, mock_bedrock_vision_response, sample_image_info
+):
     """Test Claude invocation with vision (image)."""
     mock_client = MagicMock()
     mock_client.invoke_model.return_value = mock_bedrock_vision_response
@@ -125,7 +131,9 @@ def test_invoke_claude_with_vision(mock_boto3, bedrock_client, mock_bedrock_visi
 
     bedrock_client.client = mock_client
 
-    message = bedrock_client.format_message("What is in this image?", images=[sample_image_info])
+    message = bedrock_client.format_message(
+        "What is in this image?", images=[sample_image_info]
+    )
     messages = [message]
 
     response = bedrock_client.invoke_claude(
@@ -149,7 +157,8 @@ def test_invoke_claude_client_error(mock_boto3, bedrock_client):
     """Test handling of Bedrock client errors."""
     mock_client = MagicMock()
     mock_client.invoke_model.side_effect = ClientError(
-        {"Error": {"Code": "ValidationException", "Message": "Invalid model"}}, "InvokeModel"
+        {"Error": {"Code": "ValidationException", "Message": "Invalid model"}},
+        "InvokeModel",
     )
     mock_boto3.client.return_value = mock_client
 
@@ -167,7 +176,9 @@ def test_invoke_claude_unexpected_response_format(mock_boto3, bedrock_client):
     """Test handling of unexpected response format."""
     mock_client = MagicMock()
     mock_response = {
-        "body": Mock(read=Mock(return_value=json.dumps({"unexpected": "format"}).encode()))
+        "body": Mock(
+            read=Mock(return_value=json.dumps({"unexpected": "format"}).encode())
+        )
     }
     mock_client.invoke_model.return_value = mock_response
     mock_boto3.client.return_value = mock_client
@@ -184,7 +195,11 @@ def test_invoke_claude_unexpected_response_format(mock_boto3, bedrock_client):
 def test_image_base64_encoding(sample_image_bytes):
     """Test that images are properly base64 encoded."""
     client = BedrockClient()
-    image_info = {"data": sample_image_bytes, "mimetype": "image/png", "filename": "test.png"}
+    image_info = {
+        "data": sample_image_bytes,
+        "mimetype": "image/png",
+        "filename": "test.png",
+    }
 
     message = client.format_message("Test", images=[image_info])
 
@@ -201,7 +216,11 @@ def test_format_message_preserves_mimetype():
     mimetypes = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 
     for mimetype in mimetypes:
-        image_info = {"data": b"fake_image_data", "mimetype": mimetype, "filename": "test"}
+        image_info = {
+            "data": b"fake_image_data",
+            "mimetype": mimetype,
+            "filename": "test",
+        }
         message = client.format_message("Test", images=[image_info])
 
         assert message["content"][0]["source"]["media_type"] == mimetype

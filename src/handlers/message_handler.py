@@ -91,8 +91,12 @@ class MessageHandler:
                 return
 
             # Check keywords
-            if not matches_keywords(text, channel_config.keywords, channel_config.case_sensitive):
-                logger.debug(f"No keyword match in channel {channel_config.channel_name}")
+            if not matches_keywords(
+                text, channel_config.keywords, channel_config.case_sensitive
+            ):
+                logger.debug(
+                    f"No keyword match in channel {channel_config.channel_name}"
+                )
                 return
 
             # Add reaction if configured
