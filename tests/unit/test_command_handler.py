@@ -10,9 +10,7 @@ from src.handlers.command_handler import CommandHandler
 @pytest.fixture
 def command_handler(mock_slack_app, sample_app_config):
     """Create a command handler instance."""
-    return CommandHandler(
-        app=mock_slack_app, config=sample_app_config
-    )
+    return CommandHandler(app=mock_slack_app, config=sample_app_config)
 
 
 class TestCommandHandler:
@@ -24,11 +22,15 @@ class TestCommandHandler:
         assert command_handler.config is not None
 
     @patch("src.handlers.command_handler.create_llm_provider")
-    def test_handle_command_success(self, mock_create_provider, command_handler, sample_slack_command):
+    def test_handle_command_success(
+        self, mock_create_provider, command_handler, sample_slack_command
+    ):
         """Test successful command handling."""
         # Mock LLM provider
         mock_provider = Mock()
-        mock_provider.generate_response.return_value = "This is a test response from Claude."
+        mock_provider.generate_response.return_value = (
+            "This is a test response from Claude."
+        )
         mock_create_provider.return_value = mock_provider
 
         ack = Mock()
@@ -108,7 +110,9 @@ class TestCommandHandler:
         assert "not configured" in response_text.lower()
 
     @patch("src.handlers.command_handler.create_llm_provider")
-    def test_handle_command_bedrock_error(self, mock_create_provider, command_handler, sample_slack_command):
+    def test_handle_command_bedrock_error(
+        self, mock_create_provider, command_handler, sample_slack_command
+    ):
         """Test handling LLM provider errors."""
         # Mock LLM provider to return None (error)
         mock_provider = Mock()
@@ -129,7 +133,9 @@ class TestCommandHandler:
         assert "error" in response_text.lower()
 
     @patch("src.handlers.command_handler.create_llm_provider")
-    def test_handle_command_exception(self, mock_create_provider, command_handler, sample_slack_command):
+    def test_handle_command_exception(
+        self, mock_create_provider, command_handler, sample_slack_command
+    ):
         """Test handling unexpected exceptions."""
         # Mock LLM provider to raise exception
         mock_provider = Mock()
@@ -159,11 +165,15 @@ class TestCommandHandler:
         assert config is None
 
     @patch("src.handlers.command_handler.create_llm_provider")
-    def test_generate_response(self, mock_create_provider, command_handler, sample_command_config):
+    def test_generate_response(
+        self, mock_create_provider, command_handler, sample_command_config
+    ):
         """Test response generation."""
         # Mock LLM provider
         mock_provider = Mock()
-        mock_provider.generate_response.return_value = "This is a test response from Claude."
+        mock_provider.generate_response.return_value = (
+            "This is a test response from Claude."
+        )
         mock_create_provider.return_value = mock_provider
 
         command = {"user_id": "U123", "channel_id": "C123"}

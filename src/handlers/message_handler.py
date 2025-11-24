@@ -137,7 +137,9 @@ class MessageHandler:
                 return channel
         return None
 
-    def _format_message(self, text: str, images: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _format_message(
+        self, text: str, images: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
         Format a message with text and optional images for LLM providers.
 

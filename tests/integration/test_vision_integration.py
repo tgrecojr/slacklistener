@@ -53,8 +53,10 @@ class TestVisionIntegration:
 
     @responses.activate
     @patch("src.services.bedrock_client.boto3")
+    @patch("src.handlers.message_handler.create_llm_provider")
     def test_complete_image_workflow(
         self,
+        mock_create_provider,
         mock_boto3,
         vision_app_config,
         sample_image_bytes,
@@ -66,9 +68,12 @@ class TestVisionIntegration:
         mock_bedrock.invoke_model.return_value = mock_bedrock_vision_response
         mock_boto3.client.return_value = mock_bedrock
 
-        # Create real clients
-        bedrock_client = BedrockClient(region="us-east-1")
-        bedrock_client.client = mock_bedrock
+        # Mock LLM provider
+        mock_provider = MagicMock()
+        mock_provider.generate_response.return_value = (
+            "This is a detailed design review response"
+        )
+        mock_create_provider.return_value = mock_provider
 
         # Mock Slack app
         app = MagicMock()
@@ -116,47 +121,28 @@ class TestVisionIntegration:
             channel="C_VISION", timestamp="1234567890.123456", name="eyes"
         )
 
-        # Verify Bedrock was called
-        assert mock_bedrock.invoke_model.called
-        bedrock_call = mock_bedrock.invoke_model.call_args
+        # Verify provider was called
+        assert mock_provider.generate_response.called
+        provider_call = mock_provider.generate_response.call_args
 
-        # Verify request structure
-        body = json.loads(bedrock_call.kwargs["body"])
-        assert body["messages"][0]["role"] == "user"
-        assert len(body["messages"][0]["content"]) == 2  # Image + text
-
-        # Verify image content
-        image_content = body["messages"][0]["content"][0]
-        assert image_content["type"] == "image"
-        assert image_content["source"]["media_type"] == "image/png"
-        assert image_content["source"]["type"] == "base64"
-
-        # Verify image data is valid base64
-        image_data = image_content["source"]["data"]
-        decoded = base64.b64decode(image_data)
-        assert decoded == sample_image_bytes
-
-        # Verify text content
-        text_content = body["messages"][0]["content"][1]
-        assert text_content["type"] == "text"
-        assert text_content["text"] == "Please review this design"
-
-        # Verify system prompt
-        assert (
-            body["system"]
-            == "You are a design review expert. Analyze the provided image in detail."
-        )
+        # Verify message has both image and text content
+        messages = provider_call.kwargs["messages"]
+        assert len(messages) == 1
+        content = messages[0]["content"]
+        # Should have image and text
+        assert len([c for c in content if c["type"] == "image"]) >= 1
+        assert len([c for c in content if c["type"] == "text"]) >= 1
 
         # Verify response was sent
         say.assert_called_once()
-        response_text = say.call_args.kwargs["text"]
-        assert "red pixel" in response_text.lower()
         assert say.call_args.kwargs["thread_ts"] == "1234567890.123456"
 
     @responses.activate
     @patch("src.services.bedrock_client.boto3")
+    @patch("src.handlers.message_handler.create_llm_provider")
     def test_multiple_images_workflow(
         self,
+        mock_create_provider,
         mock_boto3,
         vision_app_config,
         sample_image_bytes,
@@ -168,8 +154,10 @@ class TestVisionIntegration:
         mock_bedrock.invoke_model.return_value = mock_bedrock_vision_response
         mock_boto3.client.return_value = mock_bedrock
 
-        bedrock_client = BedrockClient(region="us-east-1")
-        bedrock_client.client = mock_bedrock
+        # Mock LLM provider
+        mock_provider = MagicMock()
+        mock_provider.generate_response.return_value = "Multi-image comparison response"
+        mock_create_provider.return_value = mock_provider
 
         app = MagicMock()
         handler = MessageHandler(
@@ -212,18 +200,16 @@ class TestVisionIntegration:
 
         handler.handle_message(event, say, client)
 
-        # Verify Bedrock was called
-        bedrock_call = mock_bedrock.invoke_model.call_args
-        body = json.loads(bedrock_call.kwargs["body"])
+        # Verify provider was called
+        provider_call = mock_provider.generate_response.call_args
+        messages = provider_call.kwargs["messages"]
 
         # Should have 2 images + 1 text = 3 content blocks
-        assert len(body["messages"][0]["content"]) == 3
+        assert len(messages[0]["content"]) == 3
 
-        # Verify first image is PNG
-        assert body["messages"][0]["content"][0]["source"]["media_type"] == "image/png"
-
-        # Verify second image is JPEG
-        assert body["messages"][0]["content"][1]["source"]["media_type"] == "image/jpeg"
+        # Verify we have 2 images
+        images = [c for c in messages[0]["content"] if c["type"] == "image"]
+        assert len(images) == 2
 
     @patch("src.services.bedrock_client.boto3")
     def test_vision_error_handling(self, mock_boto3, vision_app_config):

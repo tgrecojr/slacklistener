@@ -116,6 +116,7 @@ def main() -> None:
 
     # Start the app
     logger.info("Starting Slack Listener application...")
+    logger.info(f"Bot User ID: {bot_user_id}")
     handler = SocketModeHandler(app, slack_app_token)
     handler.start()
 

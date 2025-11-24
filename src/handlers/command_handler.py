@@ -75,9 +75,7 @@ class CommandHandler:
             logger.info(f"Processing command: {command_text}")
 
             # Generate response with context
-            response_text = self._generate_response(
-                user_text, command_config, command
-            )
+            response_text = self._generate_response(user_text, command_config, command)
 
             if response_text:
                 formatted_text = format_slack_text(response_text)
@@ -134,10 +132,15 @@ class CommandHandler:
                         tool = create_tool(tool_config)
                         logger.info(f"Executing tool: {tool.get_name()}")
                         result = tool.execute(tool_context)
-                        tool_results.append(f"\n--- {tool.get_name()} Data ---\n{result}")
+                        tool_results.append(
+                            f"\n--- {tool.get_name()} Data ---\n{result}"
+                        )
                         logger.info(f"Tool {tool.get_name()} completed successfully")
                     except Exception as e:
-                        logger.error(f"Error executing tool {tool_config.get('type')}: {e}", exc_info=True)
+                        logger.error(
+                            f"Error executing tool {tool_config.get('type')}: {e}",
+                            exc_info=True,
+                        )
                         # Continue with other tools even if one fails
 
             # Build system prompt with tool enrichment
@@ -145,7 +148,9 @@ class CommandHandler:
             if tool_results:
                 enrichment = "\n".join(tool_results)
                 system_prompt = f"{command_config.system_prompt}\n\n{enrichment}"
-                logger.debug(f"Enriched system prompt with {len(tool_results)} tool result(s)")
+                logger.debug(
+                    f"Enriched system prompt with {len(tool_results)} tool result(s)"
+                )
 
             # Create LLM provider from config
             provider = create_llm_provider(command_config.llm.to_provider_config())
