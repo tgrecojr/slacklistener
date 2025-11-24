@@ -1,23 +1,37 @@
-FROM python:3.13-slim
+# Build stage - compile dependencies
+FROM python:3.13-slim AS builder
 
-# Set working directory
-WORKDIR /app
-
-# Install system dependencies
+# Install build dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Install Python dependencies
+# Copy and install requirements
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+
+# Final stage - runtime only
+FROM python:3.13-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy Python virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
 COPY src/ ./src/
 COPY run.py .
+
+# Create config directory (config.yaml should be mounted as volume)
+RUN mkdir -p config
 
 # Run as non-root user
 RUN useradd -m -u 1000 slackbot && \

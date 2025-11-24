@@ -30,7 +30,7 @@ def expand_env_vars(config_dict: Any) -> Any:
         return [expand_env_vars(item) for item in config_dict]
     elif isinstance(config_dict, str):
         # Replace ${VAR_NAME} with environment variable value
-        pattern = re.compile(r'\$\{([^}]+)\}')
+        pattern = re.compile(r"\$\{([^}]+)\}")
 
         def replace_var(match):
             var_name = match.group(1)
@@ -129,7 +129,9 @@ class ChannelConfig(BaseModel):
     )
 
     # Backwards compatibility fields
-    bedrock: Optional[LLMConfig] = Field(None, description="Deprecated: use 'llm' instead")
+    bedrock: Optional[LLMConfig] = Field(
+        None, description="Deprecated: use 'llm' instead"
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -161,7 +163,9 @@ class SlashCommandConfig(BaseModel):
     )
 
     # Backwards compatibility fields
-    bedrock: Optional[LLMConfig] = Field(None, description="Deprecated: use 'llm' instead")
+    bedrock: Optional[LLMConfig] = Field(
+        None, description="Deprecated: use 'llm' instead"
+    )
 
     @model_validator(mode="before")
     @classmethod

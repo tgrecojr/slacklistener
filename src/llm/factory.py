@@ -33,7 +33,9 @@ def create_llm_provider(provider_config: Dict[str, Any]) -> LLMProvider:
     if provider_type == "bedrock":
         return BedrockProvider(
             region=provider_config.get("region", "us-east-1"),
-            model_id=provider_config.get("model_id", "anthropic.claude-3-5-haiku-20241022-v1:0"),
+            model_id=provider_config.get(
+                "model_id", "anthropic.claude-3-5-haiku-20241022-v1:0"
+            ),
             aws_access_key_id=provider_config.get("aws_access_key_id"),
             aws_secret_access_key=provider_config.get("aws_secret_access_key"),
         )

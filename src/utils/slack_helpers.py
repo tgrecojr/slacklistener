@@ -96,6 +96,10 @@ def extract_message_images(
                     logger.debug(
                         f"Downloaded image: {file_obj.get('name')} ({mimetype})"
                     )
+                else:
+                    logger.error(f"Failed to download image: {file_obj.get('name')}")
+            else:
+                logger.warning(f"No url_private found for file: {file_obj.get('name')}")
 
     return images
 

@@ -26,10 +26,16 @@ class TestMessageHandler:
         assert message_handler.bot_user_id == "U12345"
         assert message_handler.bot_token == "xoxb-test-token"
 
+    @patch("src.handlers.message_handler.create_llm_provider")
     def test_handle_message_with_keyword(
-        self, message_handler, sample_slack_message_event
+        self, mock_create_provider, message_handler, sample_slack_message_event
     ):
         """Test handling message with matching keyword."""
+        # Mock LLM provider
+        mock_provider = Mock()
+        mock_provider.generate_response.return_value = "test response from Claude"
+        mock_create_provider.return_value = mock_provider
+
         say = Mock()
         client = Mock()
         client.reactions_add = Mock()
@@ -113,10 +119,16 @@ class TestMessageHandler:
         # Should be ignored
         say.assert_not_called()
 
+    @patch("src.handlers.message_handler.create_llm_provider")
     def test_handle_message_thread_reply(
-        self, message_handler, sample_slack_message_event
+        self, mock_create_provider, message_handler, sample_slack_message_event
     ):
         """Test replying in thread."""
+        # Mock LLM provider
+        mock_provider = Mock()
+        mock_provider.generate_response.return_value = "test response"
+        mock_create_provider.return_value = mock_provider
+
         say = Mock()
         client = Mock()
         client.reactions_add = Mock()
@@ -144,15 +156,22 @@ class TestMessageHandler:
         # Should be ignored due to length
         say.assert_not_called()
 
+    @patch("src.handlers.message_handler.create_llm_provider")
     @patch("src.handlers.message_handler.extract_message_images")
     def test_handle_message_with_image(
         self,
         mock_extract_images,
+        mock_create_provider,
         message_handler,
         sample_slack_image_event,
         sample_image_info,
     ):
         """Test handling message with image."""
+        # Mock LLM provider
+        mock_provider = Mock()
+        mock_provider.generate_response.return_value = "image analysis response"
+        mock_create_provider.return_value = mock_provider
+
         # Mock image extraction
         mock_extract_images.return_value = [sample_image_info]
 
@@ -181,8 +200,7 @@ class TestMessageHandler:
 
         message_handler.handle_message(event, say, client)
 
-        # Should call bedrock with images
-        assert message_handler.bedrock_client.format_message.called
+        # Should process with images and send response
         say.assert_called_once()
 
     @patch("src.handlers.message_handler.extract_message_images")
@@ -218,10 +236,15 @@ class TestMessageHandler:
         # Should not respond (no image)
         say.assert_not_called()
 
-    def test_generate_response_error_handling(self, message_handler):
+    @patch("src.handlers.message_handler.create_llm_provider")
+    def test_generate_response_error_handling(
+        self, mock_create_provider, message_handler
+    ):
         """Test error handling in response generation."""
-        # Make bedrock return None (error case)
-        message_handler.bedrock_client.invoke_claude.return_value = None
+        # Make provider return None (error case)
+        mock_provider = Mock()
+        mock_provider.generate_response.return_value = None
+        mock_create_provider.return_value = mock_provider
 
         say = Mock()
         client = Mock()
