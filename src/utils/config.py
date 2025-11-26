@@ -42,57 +42,22 @@ def expand_env_vars(config_dict: Any) -> Any:
 
 
 class LLMConfig(BaseModel):
-    """LLM provider configuration."""
+    """OpenRouter LLM configuration."""
 
-    model_config = ConfigDict(extra="allow")  # Allow additional fields
+    model_config = ConfigDict(extra="forbid")
 
-    # Provider selection
-    provider: str = Field(
-        default="bedrock", description="LLM provider (bedrock, anthropic, openai)"
+    # OpenRouter parameters
+    api_key: str = Field(..., description="OpenRouter API key")
+    model: str = Field(
+        default="anthropic/claude-3.5-sonnet",
+        description="Model identifier (e.g., anthropic/claude-3.5-sonnet, openai/gpt-4)"
     )
-
-    # Common parameters
     max_tokens: int = Field(default=1024, ge=1, le=100000)
     temperature: float = Field(default=0.7, ge=0.0, le=1.0)
-
-    # Bedrock-specific parameters
-    model_id: Optional[str] = Field(
-        None, description="Model ID (for bedrock or provider-specific)"
+    base_url: str = Field(
+        default="https://openrouter.ai/api/v1",
+        description="OpenRouter API base URL"
     )
-    region: Optional[str] = Field(None, description="AWS region (for bedrock)")
-    aws_access_key_id: Optional[str] = Field(None, description="AWS access key")
-    aws_secret_access_key: Optional[str] = Field(None, description="AWS secret key")
-
-    # Anthropic/OpenAI-specific parameters
-    model: Optional[str] = Field(None, description="Model name (for anthropic/openai)")
-    api_key: Optional[str] = Field(None, description="API key (for anthropic/openai)")
-
-    def to_provider_config(self) -> dict:
-        """Convert to provider config dict for factory."""
-        config_dict = {"provider": self.provider}
-
-        # Add all non-None fields
-        for field_name in self.__class__.model_fields:
-            value = getattr(self, field_name)
-            if value is not None and field_name != "provider":
-                config_dict[field_name] = value
-
-        # Smart mapping: if provider is bedrock and 'model' is set but 'model_id' is not, use 'model' as 'model_id'
-        if self.provider == "bedrock":
-            if "model" in config_dict and "model_id" not in config_dict:
-                config_dict["model_id"] = config_dict["model"]
-                del config_dict["model"]
-        # Similarly for anthropic/openai: if 'model_id' is set but 'model' is not, use 'model_id' as 'model'
-        elif self.provider in ["anthropic", "openai"]:
-            if "model_id" in config_dict and "model" not in config_dict:
-                config_dict["model"] = config_dict["model_id"]
-                del config_dict["model_id"]
-
-        return config_dict
-
-
-# Keep BedrockConfig as alias for backwards compatibility
-BedrockConfig = LLMConfig
 
 
 class ResponseConfig(BaseModel):
@@ -119,7 +84,7 @@ class ChannelConfig(BaseModel):
     require_image: bool = Field(
         default=False, description="Only respond to messages with images"
     )
-    llm: Optional[LLMConfig] = Field(None, description="LLM provider configuration")
+    llm: Optional[LLMConfig] = Field(None, description="LLM configuration")
     system_prompt: str = Field(..., description="System prompt for LLM")
     tools: List[Dict[str, Any]] = Field(
         default_factory=list, description="Tools to execute before LLM invocation"
@@ -127,21 +92,6 @@ class ChannelConfig(BaseModel):
     response: ResponseConfig = Field(
         default_factory=ResponseConfig, description="Response settings"
     )
-
-    # Backwards compatibility fields
-    bedrock: Optional[LLMConfig] = Field(
-        None, description="Deprecated: use 'llm' instead"
-    )
-
-    @model_validator(mode="before")
-    @classmethod
-    def handle_bedrock_field(cls, data: Any) -> Any:
-        """Handle backwards compatibility for 'bedrock' field name."""
-        if isinstance(data, dict):
-            # If 'bedrock' is provided but not 'llm', copy it over
-            if "bedrock" in data and "llm" not in data:
-                data["llm"] = data["bedrock"]
-        return data
 
     @field_validator("keywords")
     @classmethod
@@ -156,26 +106,11 @@ class SlashCommandConfig(BaseModel):
     command: str = Field(..., description="Command name (e.g., /analyze)")
     description: str = Field(..., description="Command description")
     enabled: bool = Field(default=True, description="Whether this command is enabled")
-    llm: Optional[LLMConfig] = Field(None, description="LLM provider configuration")
+    llm: Optional[LLMConfig] = Field(None, description="LLM configuration")
     system_prompt: str = Field(..., description="System prompt for LLM")
     tools: List[Dict[str, Any]] = Field(
         default_factory=list, description="Tools to execute before LLM invocation"
     )
-
-    # Backwards compatibility fields
-    bedrock: Optional[LLMConfig] = Field(
-        None, description="Deprecated: use 'llm' instead"
-    )
-
-    @model_validator(mode="before")
-    @classmethod
-    def handle_bedrock_field(cls, data: Any) -> Any:
-        """Handle backwards compatibility for 'bedrock' field name."""
-        if isinstance(data, dict):
-            # If 'bedrock' is provided but not 'llm', copy it over
-            if "bedrock" in data and "llm" not in data:
-                data["llm"] = data["bedrock"]
-        return data
 
     @field_validator("command")
     @classmethod
@@ -193,8 +128,8 @@ class GlobalSettings(BaseModel):
     max_message_length: int = Field(
         default=10000, ge=1, description="Max message length to process"
     )
-    bedrock_timeout: int = Field(
-        default=30, ge=1, le=300, description="Bedrock API timeout"
+    llm_timeout: int = Field(
+        default=30, ge=1, le=300, description="LLM API timeout in seconds"
     )
     ignore_bot_messages: bool = Field(
         default=True, description="Ignore messages from bots"

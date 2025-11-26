@@ -1,6 +1,5 @@
-"""LLM provider abstraction."""
+"""OpenRouter LLM client."""
 
-from .provider import LLMProvider
-from .factory import create_llm_provider
+from .openrouter import OpenRouterClient
 
-__all__ = ["LLMProvider", "create_llm_provider"]
+__all__ = ["OpenRouterClient"]

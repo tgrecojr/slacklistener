@@ -1,40 +1,36 @@
-"""OpenAI API LLM provider implementation."""
+"""OpenRouter LLM client."""
 
 import logging
 from typing import List, Dict, Any, Optional
 
-from ..provider import LLMProvider
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
 
-class OpenAIProvider(LLMProvider):
-    """OpenAI API LLM provider."""
+class OpenRouterClient:
+    """OpenRouter LLM client using OpenAI SDK."""
 
     def __init__(
         self,
         api_key: str,
-        model: str = "gpt-4o",
+        model: str = "anthropic/claude-3.5-sonnet",
+        base_url: str = "https://openrouter.ai/api/v1",
     ):
         """
-        Initialize OpenAI provider.
+        Initialize OpenRouter client.
 
         Args:
-            api_key: OpenAI API key
-            model: Model name
+            api_key: OpenRouter API key
+            model: Model identifier (e.g., "anthropic/claude-3.5-sonnet")
+            base_url: OpenRouter API base URL
         """
-        try:
-            import openai
-        except ImportError:
-            raise ImportError(
-                "openai is required for OpenAIProvider. "
-                "Install it with: pip install openai"
-            )
-
-        self.api_key = api_key
         self.model = model
-        self.client = openai.OpenAI(api_key=api_key)
-        logger.info(f"Initialized OpenAI provider with model {model}")
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url=base_url,
+        )
+        logger.info(f"Initialized OpenRouter client with model: {model}")
 
     def generate_response(
         self,
@@ -44,7 +40,7 @@ class OpenAIProvider(LLMProvider):
         temperature: float = 0.7,
     ) -> Optional[str]:
         """
-        Generate a response using OpenAI API.
+        Generate a response from the LLM.
 
         Args:
             messages: List of message dicts with "role" and "content"
@@ -56,17 +52,19 @@ class OpenAIProvider(LLMProvider):
             Generated text response or None on error
         """
         try:
-            logger.debug(f"Invoking OpenAI model: {self.model}")
-
-            # Prepare messages - add system prompt if provided
+            # Prepare messages
             api_messages = []
+
+            # Add system prompt if provided
             if system_prompt:
                 api_messages.append({"role": "system", "content": system_prompt})
 
-            # Add user messages
+            # Add conversation messages
             api_messages.extend(messages)
 
-            # Call OpenAI API
+            logger.debug(f"Sending request to OpenRouter with {len(api_messages)} messages")
+
+            # Call OpenRouter API
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=api_messages,
@@ -74,13 +72,15 @@ class OpenAIProvider(LLMProvider):
                 temperature=temperature,
             )
 
-            # Extract and return the response text
+            # Extract response text
             if response.choices and len(response.choices) > 0:
-                return response.choices[0].message.content
+                content = response.choices[0].message.content
+                logger.debug(f"Received response: {len(content) if content else 0} characters")
+                return content
             else:
-                logger.error(f"Unexpected response format: {response}")
+                logger.warning("No response choices returned from OpenRouter")
                 return None
 
         except Exception as e:
-            logger.error(f"OpenAI API error: {e}", exc_info=True)
+            logger.error(f"Error calling OpenRouter API: {e}", exc_info=True)
             return None

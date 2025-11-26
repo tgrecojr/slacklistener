@@ -6,7 +6,7 @@ from typing import Optional, List, Dict, Any
 
 from slack_bolt import App
 
-from ..llm import create_llm_provider
+from ..llm import OpenRouterClient
 from ..utils.config import AppConfig, ChannelConfig
 from ..utils.slack_helpers import (
     matches_keywords,
@@ -183,7 +183,7 @@ class MessageHandler:
         channel_config: ChannelConfig,
     ) -> Optional[str]:
         """
-        Generate LLM response.
+        Generate LLM response using OpenRouter.
 
         Args:
             text: Message text
@@ -194,14 +194,18 @@ class MessageHandler:
             Response text or None on error
         """
         try:
-            # Create LLM provider from config
-            provider = create_llm_provider(channel_config.llm.to_provider_config())
+            # Create OpenRouter client from config
+            client = OpenRouterClient(
+                api_key=channel_config.llm.api_key,
+                model=channel_config.llm.model,
+                base_url=channel_config.llm.base_url,
+            )
 
             # Format message
             message = self._format_message(text, images)
 
             # Generate response
-            response = provider.generate_response(
+            response = client.generate_response(
                 messages=[message],
                 system_prompt=channel_config.system_prompt,
                 max_tokens=channel_config.llm.max_tokens,

@@ -2,15 +2,7 @@
 slack-bolt>=1.20.1
 slack-sdk>=3.33.4
 
-# LLM Providers
-# AWS Bedrock
-boto3>=1.35.77
-botocore>=1.35.77
-
-# Anthropic (optional - install if using Anthropic provider)
-anthropic>=0.40.0
-
-# OpenAI (optional - install if using OpenAI provider)
+# LLM Provider - OpenRouter (uses OpenAI SDK)
 openai>=1.59.7
 
 # Configuration

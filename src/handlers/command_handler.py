@@ -6,8 +6,7 @@ from typing import Optional
 
 from slack_bolt import App
 
-from ..llm import create_llm_provider
-from ..llm.provider import LLMProvider
+from ..llm import OpenRouterClient
 from ..tools.factory import create_tool
 from ..utils.config import AppConfig, SlashCommandConfig
 from ..utils.slack_helpers import format_slack_text
@@ -103,7 +102,7 @@ class CommandHandler:
         command: dict,
     ) -> Optional[str]:
         """
-        Generate LLM response for command.
+        Generate LLM response for command using OpenRouter.
 
         Args:
             text: User's text
@@ -152,14 +151,18 @@ class CommandHandler:
                     f"Enriched system prompt with {len(tool_results)} tool result(s)"
                 )
 
-            # Create LLM provider from config
-            provider = create_llm_provider(command_config.llm.to_provider_config())
+            # Create OpenRouter client from config
+            client = OpenRouterClient(
+                api_key=command_config.llm.api_key,
+                model=command_config.llm.model,
+                base_url=command_config.llm.base_url,
+            )
 
             # Create simple text message
             message = {"role": "user", "content": [{"type": "text", "text": text}]}
 
             # Generate response
-            response = provider.generate_response(
+            response = client.generate_response(
                 messages=[message],
                 system_prompt=system_prompt,
                 max_tokens=command_config.llm.max_tokens,
