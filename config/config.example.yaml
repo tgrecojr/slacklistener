@@ -1,16 +1,15 @@
 # Slack Listener Configuration Example
 # Copy this file to config.yaml and fill in your values
 #
-# PROVIDER OPTIONS:
-# - bedrock: AWS Bedrock (Claude models via AWS infrastructure)
-# - anthropic: Anthropic Direct API (Claude models, simple API key auth)
-# - openai: OpenAI API (GPT-4, GPT-3.5, etc.)
+# This application uses OpenRouter for all LLM calls, which provides unified
+# access to multiple model providers (Anthropic Claude, OpenAI GPT, etc.)
 #
+# Get your OpenRouter API key at: https://openrouter.ai/keys
 # Set API keys in .env file and reference them with ${VARIABLE_NAME}
 
 # Channel configurations
 channels:
-  # Example 1: Using Anthropic Direct API
+  # Example 1: Using Claude 3.5 Sonnet via OpenRouter
   - channel_id: "C01234567"
     channel_name: "support"
     enabled: true
@@ -21,13 +20,13 @@ channels:
       - "error"
     case_sensitive: false
 
-    # LLM configuration - Anthropic Direct API
+    # LLM configuration - OpenRouter
     llm:
-      provider: "anthropic"
-      model: "claude-3-5-sonnet-20241022"
-      api_key: "${ANTHROPIC_API_KEY}"  # From .env file
+      api_key: "${OPENROUTER_API_KEY}"  # From .env file
+      model: "anthropic/claude-3.5-sonnet"  # OpenRouter model identifier
       max_tokens: 1024
       temperature: 0.7
+      # base_url: "https://openrouter.ai/api/v1"  # Optional, this is the default
 
     system_prompt: |
       You are a helpful support assistant. When users report issues,
@@ -37,7 +36,7 @@ channels:
       thread_reply: true
       add_reaction: "eyes"
 
-  # Example 2: Using AWS Bedrock
+  # Example 2: Using Claude 3.5 Haiku for faster responses
   - channel_id: "C02345678"
     channel_name: "sales-inquiries"
     enabled: true
@@ -48,11 +47,10 @@ channels:
       - "purchase"
     case_sensitive: false
 
-    # LLM configuration - AWS Bedrock
+    # LLM configuration - Fast model
     llm:
-      provider: "bedrock"
-      model_id: "anthropic.claude-3-5-haiku-20241022-v1:0"
-      region: "us-east-1"
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "anthropic/claude-3.5-haiku"
       max_tokens: 512
       temperature: 0.5
 
@@ -64,18 +62,17 @@ channels:
       thread_reply: true
       add_reaction: "moneybag"
 
-  # Example 3: Using OpenAI
+  # Example 3: Using GPT-4 via OpenRouter
   - channel_id: "C03456789"
     channel_name: "general-chat"
     enabled: true
     keywords: ["chatbot", "ai", "question"]
     case_sensitive: false
 
-    # LLM configuration - OpenAI
+    # LLM configuration - OpenAI model via OpenRouter
     llm:
-      provider: "openai"
-      model: "gpt-4o"
-      api_key: "${OPENAI_API_KEY}"  # From .env file
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "openai/gpt-4o"
       max_tokens: 1024
       temperature: 0.7
 
@@ -87,7 +84,7 @@ channels:
       thread_reply: true
       add_reaction: "robot_face"
 
-  # Example 4: Image analysis with Claude (Bedrock or Anthropic)
+  # Example 4: Image analysis with Claude
   - channel_id: "C04567890"
     channel_name: "design-review"
     enabled: true
@@ -95,11 +92,9 @@ channels:
     require_image: true  # Only respond to messages with images
     case_sensitive: false
 
-    # Use Anthropic for vision (also works with Bedrock)
     llm:
-      provider: "anthropic"
-      model: "claude-3-5-sonnet-20241022"
-      api_key: "${ANTHROPIC_API_KEY}"
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "anthropic/claude-3.5-sonnet"
       max_tokens: 2048
       temperature: 0.7
 
@@ -124,9 +119,8 @@ channels:
     case_sensitive: false
 
     llm:
-      provider: "bedrock"
-      model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
-      region: "us-east-1"
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "anthropic/claude-3.5-sonnet"
       max_tokens: 1500
       temperature: 0.5
 
@@ -150,9 +144,8 @@ channels:
     case_sensitive: false
 
     llm:
-      provider: "anthropic"
-      model: "claude-3-5-sonnet-20241022"
-      api_key: "${ANTHROPIC_API_KEY}"
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "anthropic/claude-3.5-sonnet"
       max_tokens: 1024
       temperature: 0.3
 
@@ -170,15 +163,14 @@ channels:
 
 # Slash command configurations
 slash_commands:
-  # Example: /analyze command with Anthropic
+  # Example: /analyze command
   - command: "/analyze"
     description: "Analyze text or images with AI"
     enabled: true
 
     llm:
-      provider: "anthropic"
-      model: "claude-3-5-sonnet-20241022"
-      api_key: "${ANTHROPIC_API_KEY}"
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "anthropic/claude-3.5-sonnet"
       max_tokens: 2048
       temperature: 0.7
 
@@ -186,15 +178,14 @@ slash_commands:
       You are an analytical assistant. Provide thorough analysis
       of the provided content.
 
-  # Example: /summarize command with Bedrock
+  # Example: /summarize command with faster model
   - command: "/summarize"
     description: "Summarize conversation or content"
     enabled: true
 
     llm:
-      provider: "bedrock"
-      model_id: "anthropic.claude-3-5-haiku-20241022-v1:0"
-      region: "us-east-1"
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "anthropic/claude-3.5-haiku"
       max_tokens: 500
       temperature: 0.3
 
@@ -202,15 +193,14 @@ slash_commands:
       You are a summarization expert. Create concise, accurate
       summaries of the provided content.
 
-  # Example: /explain command with OpenAI
+  # Example: /explain command with GPT-4
   - command: "/explain"
     description: "Explain complex topics simply"
     enabled: true
 
     llm:
-      provider: "openai"
-      model: "gpt-4o"
-      api_key: "${OPENAI_API_KEY}"
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "openai/gpt-4o"
       max_tokens: 1024
       temperature: 0.7
 
@@ -224,9 +214,8 @@ slash_commands:
     enabled: true
 
     llm:
-      provider: "anthropic"
-      model: "claude-3-5-sonnet-20241022"
-      api_key: "${ANTHROPIC_API_KEY}"
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "anthropic/claude-3.5-sonnet"
       max_tokens: 1024
       temperature: 0.7
 
@@ -258,8 +247,8 @@ settings:
   # Maximum message length to process (characters)
   max_message_length: 10000
 
-  # Timeout for Bedrock API calls (seconds)
-  bedrock_timeout: 30
+  # Timeout for LLM API calls (seconds)
+  llm_timeout: 30
 
   # Whether to process bot messages
   ignore_bot_messages: true
