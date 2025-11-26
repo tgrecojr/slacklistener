@@ -3,7 +3,7 @@
 import logging
 from typing import List, Dict, Any, Optional
 
-from openai import OpenAI
+from openai import OpenAI, APIStatusError, APIConnectionError, APITimeoutError
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +81,51 @@ class OpenRouterClient:
                 logger.warning("No response choices returned from OpenRouter")
                 return None
 
+        except APIStatusError as e:
+            # Handle specific HTTP status errors from OpenRouter
+            if e.status_code == 402:
+                logger.error(
+                    "OpenRouter API Error: Insufficient credits. "
+                    "Please add credits at https://openrouter.ai/settings/credits"
+                )
+            elif e.status_code == 401:
+                logger.error(
+                    "OpenRouter API Error: Authentication failed. "
+                    "Please check your API key in the .env file"
+                )
+            elif e.status_code == 429:
+                logger.error(
+                    "OpenRouter API Error: Rate limit exceeded. "
+                    "Please wait before making more requests"
+                )
+            elif e.status_code == 503:
+                logger.error(
+                    "OpenRouter API Error: Service temporarily unavailable. "
+                    "Please try again later"
+                )
+            else:
+                logger.error(
+                    f"OpenRouter API Error (HTTP {e.status_code}): {e.message}"
+                )
+            return None
+
+        except APIConnectionError as e:
+            logger.error(
+                "OpenRouter API Error: Failed to connect to OpenRouter. "
+                "Please check your internet connection"
+            )
+            return None
+
+        except APITimeoutError as e:
+            logger.error(
+                "OpenRouter API Error: Request timed out. "
+                "Please try again or increase the timeout setting"
+            )
+            return None
+
         except Exception as e:
-            logger.error(f"Error calling OpenRouter API: {e}", exc_info=True)
+            logger.error(
+                f"Unexpected error calling OpenRouter API: {e}",
+                exc_info=True
+            )
             return None
