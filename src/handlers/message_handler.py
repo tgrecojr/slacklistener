@@ -81,11 +81,13 @@ class MessageHandler:
 
             # Check if message has images
             images = extract_message_images(event, client, self.bot_token)
-            has_images = len(images) > 0
+            # Validate that images have actual data, not just that files were detected
+            valid_images = [img for img in images if img.get("data")]
+            has_images = len(valid_images) > 0
 
             # Check if we should respond to this message
             if channel_config.require_image and not has_images:
-                logger.debug("Message has no images, skipping (require_image=True)")
+                logger.debug("Message has no images with valid data, skipping (require_image=True)")
                 return
 
             # Check keywords
@@ -111,10 +113,10 @@ class MessageHandler:
             # Generate response
             logger.info(
                 f"Processing message in {channel_config.channel_name} "
-                f"(images: {len(images)}, keywords matched)"
+                f"(images: {len(valid_images)}, keywords matched)"
             )
 
-            response_text = self._generate_response(text, images, channel_config)
+            response_text = self._generate_response(text, valid_images, channel_config)
 
             if response_text:
                 # Send response
@@ -159,18 +161,18 @@ class MessageHandler:
                 mimetype = image_info.get("mimetype", "image/jpeg")
 
                 if image_data:
+                    # Format for OpenAI API (used by OpenRouter)
+                    base64_data = base64.b64encode(image_data).decode("utf-8")
                     content.append(
                         {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": mimetype,
-                                "data": base64.b64encode(image_data).decode("utf-8"),
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{mimetype};base64,{base64_data}"
                             },
                         }
                     )
 
-        # Add text - Anthropic's API requires text content
+        # Add text content
         # If there's no text but we have images, add a placeholder
         if text:
             content.append({"type": "text", "text": text})
