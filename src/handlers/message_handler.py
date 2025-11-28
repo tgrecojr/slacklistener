@@ -170,9 +170,16 @@ class MessageHandler:
                         }
                     )
 
-        # Add text
+        # Add text - Anthropic's API requires text content
+        # If there's no text but we have images, add a placeholder
         if text:
             content.append({"type": "text", "text": text})
+        elif images:
+            # Images present but no text - add placeholder for LLM to analyze
+            content.append({"type": "text", "text": "Please analyze this image."})
+        else:
+            # No images and no text - add minimal content to avoid API error
+            content.append({"type": "text", "text": "Hello"})
 
         return {"role": "user", "content": content}
 
