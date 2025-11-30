@@ -156,6 +156,8 @@ class CommandHandler:
                 api_key=command_config.llm.api_key,
                 model=command_config.llm.model,
                 base_url=command_config.llm.base_url,
+                site_url=command_config.llm.site_url,
+                site_name=command_config.llm.site_name,
             )
 
             # Create simple text message

@@ -28,6 +28,11 @@ channels:
       temperature: 0.7
       # base_url: "https://openrouter.ai/api/v1"  # Optional, this is the default
 
+      # App attribution headers (optional - shown in OpenRouter console)
+      # These defaults are used if not specified:
+      # site_url: "https://github.com/tgrecojr/slacklistener"  # Your app URL for rankings
+      # site_name: "slacklistener"  # Your app name shown in OpenRouter console
+
     system_prompt: |
       You are a helpful support assistant. When users report issues,
       provide clear, actionable guidance. Be friendly and professional.
