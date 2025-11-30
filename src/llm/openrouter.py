@@ -16,6 +16,8 @@ class OpenRouterClient:
         api_key: str,
         model: str = "anthropic/claude-3.5-sonnet",
         base_url: str = "https://openrouter.ai/api/v1",
+        site_url: str = "https://github.com/tgrecojr/slacklistener",
+        site_name: str = "slacklistener",
     ):
         """
         Initialize OpenRouter client.
@@ -24,13 +26,19 @@ class OpenRouterClient:
             api_key: OpenRouter API key
             model: Model identifier (e.g., "anthropic/claude-3.5-sonnet")
             base_url: OpenRouter API base URL
+            site_url: App URL for OpenRouter attribution (shown in rankings)
+            site_name: App name for OpenRouter attribution (shown in console)
         """
         self.model = model
+        self.site_url = site_url
+        self.site_name = site_name
         self.client = OpenAI(
             api_key=api_key,
             base_url=base_url,
         )
-        logger.info(f"Initialized OpenRouter client with model: {model}")
+        logger.info(
+            f"Initialized OpenRouter client with model: {model}, site: {site_name}"
+        )
 
     def generate_response(
         self,
@@ -62,7 +70,15 @@ class OpenRouterClient:
             # Add conversation messages
             api_messages.extend(messages)
 
-            logger.debug(f"Sending request to OpenRouter with {len(api_messages)} messages")
+            logger.debug(
+                f"Sending request to OpenRouter with {len(api_messages)} messages"
+            )
+
+            # Prepare attribution headers
+            extra_headers = {
+                "HTTP-Referer": self.site_url,
+                "X-Title": self.site_name,
+            }
 
             # Call OpenRouter API
             response = self.client.chat.completions.create(
@@ -70,12 +86,15 @@ class OpenRouterClient:
                 messages=api_messages,
                 max_tokens=max_tokens,
                 temperature=temperature,
+                extra_headers=extra_headers,
             )
 
             # Extract response text
             if response.choices and len(response.choices) > 0:
                 content = response.choices[0].message.content
-                logger.debug(f"Received response: {len(content) if content else 0} characters")
+                logger.debug(
+                    f"Received response: {len(content) if content else 0} characters"
+                )
                 return content
             else:
                 logger.warning("No response choices returned from OpenRouter")
@@ -124,8 +143,5 @@ class OpenRouterClient:
             return None
 
         except Exception as e:
-            logger.error(
-                f"Unexpected error calling OpenRouter API: {e}",
-                exc_info=True
-            )
+            logger.error(f"Unexpected error calling OpenRouter API: {e}", exc_info=True)
             return None

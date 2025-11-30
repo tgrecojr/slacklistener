@@ -87,7 +87,9 @@ class MessageHandler:
 
             # Check if we should respond to this message
             if channel_config.require_image and not has_images:
-                logger.debug("Message has no images with valid data, skipping (require_image=True)")
+                logger.debug(
+                    "Message has no images with valid data, skipping (require_image=True)"
+                )
                 return
 
             # Check keywords
@@ -208,6 +210,8 @@ class MessageHandler:
                 api_key=channel_config.llm.api_key,
                 model=channel_config.llm.model,
                 base_url=channel_config.llm.base_url,
+                site_url=channel_config.llm.site_url,
+                site_name=channel_config.llm.site_name,
             )
 
             # Format message

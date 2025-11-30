@@ -50,13 +50,22 @@ class LLMConfig(BaseModel):
     api_key: str = Field(..., description="OpenRouter API key")
     model: str = Field(
         default="anthropic/claude-3.5-sonnet",
-        description="Model identifier (e.g., anthropic/claude-3.5-sonnet, openai/gpt-4)"
+        description="Model identifier (e.g., anthropic/claude-3.5-sonnet, openai/gpt-4)",
     )
     max_tokens: int = Field(default=1024, ge=1, le=100000)
     temperature: float = Field(default=0.7, ge=0.0, le=1.0)
     base_url: str = Field(
-        default="https://openrouter.ai/api/v1",
-        description="OpenRouter API base URL"
+        default="https://openrouter.ai/api/v1", description="OpenRouter API base URL"
+    )
+
+    # App attribution headers
+    site_url: str = Field(
+        default="https://github.com/tgrecojr/slacklistener",
+        description="App URL for OpenRouter attribution (shown in rankings)",
+    )
+    site_name: str = Field(
+        default="slacklistener",
+        description="App name for OpenRouter attribution (shown in console)",
     )
 
 
