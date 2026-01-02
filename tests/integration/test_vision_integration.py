@@ -12,7 +12,7 @@ from src.services.bedrock_client import BedrockClient
 from src.utils.config import (
     AppConfig,
     ChannelConfig,
-    BedrockConfig,
+    LLMConfig,
     ResponseConfig,
     GlobalSettings,
 )
@@ -27,9 +27,9 @@ def vision_channel_config():
         enabled=True,
         keywords=[],
         require_image=True,
-        bedrock=BedrockConfig(
-            model_id="anthropic.claude-3-5-sonnet-20241022-v2:0",
-            region="us-east-1",
+        llm=LLMConfig(
+            api_key="test-api-key",
+            model="anthropic/claude-3.5-sonnet",
             max_tokens=2048,
             temperature=0.7,
         ),
@@ -53,27 +53,27 @@ class TestVisionIntegration:
 
     @responses.activate
     @patch("src.services.bedrock_client.boto3")
-    @patch("src.handlers.message_handler.create_llm_provider")
+    @patch("src.handlers.message_handler.OpenRouterClient")
     def test_complete_image_workflow(
         self,
-        mock_create_provider,
+        mock_client_class,
         mock_boto3,
         vision_app_config,
         sample_image_bytes,
         mock_bedrock_vision_response,
     ):
-        """Test complete workflow: Slack image -> Bedrock vision -> Response."""
+        """Test complete workflow: Slack image -> OpenRouter vision -> Response."""
         # Setup Bedrock mock
         mock_bedrock = MagicMock()
         mock_bedrock.invoke_model.return_value = mock_bedrock_vision_response
         mock_boto3.client.return_value = mock_bedrock
 
-        # Mock LLM provider
-        mock_provider = MagicMock()
-        mock_provider.generate_response.return_value = (
+        # Mock LLM client
+        mock_client = MagicMock()
+        mock_client.generate_response.return_value = (
             "This is a detailed design review response"
         )
-        mock_create_provider.return_value = mock_provider
+        mock_client_class.return_value = mock_client
 
         # Mock Slack app
         app = MagicMock()
@@ -121,9 +121,9 @@ class TestVisionIntegration:
             channel="C_VISION", timestamp="1234567890.123456", name="eyes"
         )
 
-        # Verify provider was called
-        assert mock_provider.generate_response.called
-        provider_call = mock_provider.generate_response.call_args
+        # Verify client was called
+        assert mock_client.generate_response.called
+        provider_call = mock_client.generate_response.call_args
 
         # Verify message has both image and text content
         messages = provider_call.kwargs["messages"]
@@ -139,10 +139,10 @@ class TestVisionIntegration:
 
     @responses.activate
     @patch("src.services.bedrock_client.boto3")
-    @patch("src.handlers.message_handler.create_llm_provider")
+    @patch("src.handlers.message_handler.OpenRouterClient")
     def test_multiple_images_workflow(
         self,
-        mock_create_provider,
+        mock_client_class,
         mock_boto3,
         vision_app_config,
         sample_image_bytes,
@@ -154,10 +154,10 @@ class TestVisionIntegration:
         mock_bedrock.invoke_model.return_value = mock_bedrock_vision_response
         mock_boto3.client.return_value = mock_bedrock
 
-        # Mock LLM provider
-        mock_provider = MagicMock()
-        mock_provider.generate_response.return_value = "Multi-image comparison response"
-        mock_create_provider.return_value = mock_provider
+        # Mock LLM client
+        mock_client = MagicMock()
+        mock_client.generate_response.return_value = "Multi-image comparison response"
+        mock_client_class.return_value = mock_client
 
         app = MagicMock()
         handler = MessageHandler(
@@ -200,8 +200,8 @@ class TestVisionIntegration:
 
         handler.handle_message(event, say, client)
 
-        # Verify provider was called
-        provider_call = mock_provider.generate_response.call_args
+        # Verify client was called
+        provider_call = mock_client.generate_response.call_args
         messages = provider_call.kwargs["messages"]
 
         # Should have 2 images + 1 text = 3 content blocks

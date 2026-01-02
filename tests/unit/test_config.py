@@ -10,47 +10,47 @@ from src.utils.config import (
     load_config,
     get_channel_config,
     get_command_config,
-    BedrockConfig,
+    LLMConfig,
     ChannelConfig,
     AppConfig,
 )
 
 
-def test_bedrock_config_validation():
-    """Test Bedrock configuration validation."""
+def test_llm_config_validation():
+    """Test LLM configuration validation."""
     # Valid config
-    config = BedrockConfig(
-        model_id="anthropic.claude-3-5-sonnet-20241022-v2:0",
-        region="us-east-1",
+    config = LLMConfig(
+        api_key="test-api-key",
+        model="anthropic/claude-3.5-sonnet",
         max_tokens=1024,
         temperature=0.7,
     )
-    assert config.model_id == "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    assert config.model == "anthropic/claude-3.5-sonnet"
     assert config.max_tokens == 1024
 
     # Invalid temperature
     with pytest.raises(ValueError):
-        BedrockConfig(
-            model_id="test-model",
+        LLMConfig(
+            api_key="test-api-key",
             temperature=1.5,  # > 1.0
         )
 
     # Invalid max_tokens
     with pytest.raises(ValueError):
-        BedrockConfig(
-            model_id="test-model",
+        LLMConfig(
+            api_key="test-api-key",
             max_tokens=0,  # < 1
         )
 
 
 def test_channel_config_validation():
     """Test channel configuration validation."""
-    bedrock = BedrockConfig(model_id="test-model")
+    llm = LLMConfig(api_key="test-api-key", model="test-model")
 
     config = ChannelConfig(
         channel_id="C12345",
         channel_name="test",
-        bedrock=bedrock,
+        llm=llm,
         system_prompt="Test prompt",
     )
 
@@ -72,7 +72,7 @@ def test_load_config_valid(tmp_path):
             {
                 "channel_id": "C12345",
                 "channel_name": "test",
-                "bedrock": {"model_id": "test-model"},
+                "llm": {"api_key": "test-key", "model": "test-model"},
                 "system_prompt": "Test prompt",
             }
         ],
@@ -80,7 +80,7 @@ def test_load_config_valid(tmp_path):
             {
                 "command": "/test",
                 "description": "Test command",
-                "bedrock": {"model_id": "test-model"},
+                "llm": {"api_key": "test-key", "model": "test-model"},
                 "system_prompt": "Test prompt",
             }
         ],
@@ -141,12 +141,12 @@ def test_disabled_channel_not_returned(sample_channel_config):
 
 def test_slash_command_auto_adds_slash():
     """Test that slash commands automatically get / prefix."""
-    bedrock = BedrockConfig(model_id="test-model")
+    llm = LLMConfig(api_key="test-key", model="test-model")
 
     config = {
         "command": "analyze",  # No leading slash
         "description": "Test",
-        "bedrock": bedrock,
+        "llm": llm,
         "system_prompt": "Test",
     }
 

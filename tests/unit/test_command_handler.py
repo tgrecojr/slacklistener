@@ -21,17 +21,17 @@ class TestCommandHandler:
         assert command_handler.app is not None
         assert command_handler.config is not None
 
-    @patch("src.handlers.command_handler.create_llm_provider")
+    @patch("src.handlers.command_handler.OpenRouterClient")
     def test_handle_command_success(
-        self, mock_create_provider, command_handler, sample_slack_command
+        self, mock_client_class, command_handler, sample_slack_command
     ):
         """Test successful command handling."""
-        # Mock LLM provider
-        mock_provider = Mock()
-        mock_provider.generate_response.return_value = (
+        # Mock LLM client
+        mock_client = Mock()
+        mock_client.generate_response.return_value = (
             "This is a test response from Claude."
         )
-        mock_create_provider.return_value = mock_provider
+        mock_client_class.return_value = mock_client
 
         ack = Mock()
         say = Mock()
@@ -109,15 +109,13 @@ class TestCommandHandler:
         response_text = say.call_args.args[0]
         assert "not configured" in response_text.lower()
 
-    @patch("src.handlers.command_handler.create_llm_provider")
+    @patch("src.handlers.command_handler.OpenRouterClient")
     def test_handle_command_bedrock_error(
-        self, mock_create_provider, command_handler, sample_slack_command
+        self, mock_client_class, command_handler, sample_slack_command
     ):
-        """Test handling LLM provider errors."""
-        # Mock LLM provider to return None (error)
-        mock_provider = Mock()
-        mock_provider.generate_response.return_value = None
-        mock_create_provider.return_value = mock_provider
+        """Test handling LLM client errors."""
+        # Mock LLM client to raise exception
+        mock_client_class.side_effect = Exception("LLM error")
 
         ack = Mock()
         say = Mock()
@@ -132,15 +130,13 @@ class TestCommandHandler:
         response_text = say.call_args.args[0]
         assert "error" in response_text.lower()
 
-    @patch("src.handlers.command_handler.create_llm_provider")
+    @patch("src.handlers.command_handler.OpenRouterClient")
     def test_handle_command_exception(
-        self, mock_create_provider, command_handler, sample_slack_command
+        self, mock_client_class, command_handler, sample_slack_command
     ):
         """Test handling unexpected exceptions."""
-        # Mock LLM provider to raise exception
-        mock_provider = Mock()
-        mock_provider.generate_response.side_effect = Exception("Test error")
-        mock_create_provider.return_value = mock_provider
+        # Mock LLM client to raise exception
+        mock_client_class.side_effect = Exception("Test error")
 
         ack = Mock()
         say = Mock()
@@ -164,17 +160,17 @@ class TestCommandHandler:
         config = command_handler._get_command_config("/nonexistent")
         assert config is None
 
-    @patch("src.handlers.command_handler.create_llm_provider")
+    @patch("src.handlers.command_handler.OpenRouterClient")
     def test_generate_response(
-        self, mock_create_provider, command_handler, sample_command_config
+        self, mock_client_class, command_handler, sample_command_config
     ):
         """Test response generation."""
-        # Mock LLM provider
-        mock_provider = Mock()
-        mock_provider.generate_response.return_value = (
+        # Mock LLM client
+        mock_client = Mock()
+        mock_client.generate_response.return_value = (
             "This is a test response from Claude."
         )
-        mock_create_provider.return_value = mock_provider
+        mock_client_class.return_value = mock_client
 
         command = {"user_id": "U123", "channel_id": "C123"}
         response = command_handler._generate_response(
@@ -182,24 +178,24 @@ class TestCommandHandler:
         )
 
         assert response == "This is a test response from Claude."
-        mock_provider.generate_response.assert_called_once()
+        mock_client.generate_response.assert_called_once()
 
-    @patch("src.handlers.command_handler.create_llm_provider")
+    @patch("src.handlers.command_handler.OpenRouterClient")
     def test_generate_response_uses_correct_params(
-        self, mock_create_provider, command_handler, sample_command_config
+        self, mock_client_class, command_handler, sample_command_config
     ):
         """Test that response generation uses correct parameters."""
-        # Mock LLM provider
-        mock_provider = Mock()
-        mock_provider.generate_response.return_value = "Test response"
-        mock_create_provider.return_value = mock_provider
+        # Mock LLM client
+        mock_client = Mock()
+        mock_client.generate_response.return_value = "Test response"
+        mock_client_class.return_value = mock_client
 
         command = {"user_id": "U123", "channel_id": "C123"}
         command_handler._generate_response("Test", sample_command_config, command)
 
-        # Verify provider was called with correct parameters
-        mock_provider.generate_response.assert_called_once()
-        call_kwargs = mock_provider.generate_response.call_args.kwargs
+        # Verify client was called with correct parameters
+        mock_client.generate_response.assert_called_once()
+        call_kwargs = mock_client.generate_response.call_args.kwargs
 
         assert call_kwargs["max_tokens"] == sample_command_config.llm.max_tokens
         assert call_kwargs["temperature"] == sample_command_config.llm.temperature

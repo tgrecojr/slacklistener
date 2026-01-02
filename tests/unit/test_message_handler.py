@@ -26,15 +26,15 @@ class TestMessageHandler:
         assert message_handler.bot_user_id == "U12345"
         assert message_handler.bot_token == "xoxb-test-token"
 
-    @patch("src.handlers.message_handler.create_llm_provider")
+    @patch("src.handlers.message_handler.OpenRouterClient")
     def test_handle_message_with_keyword(
-        self, mock_create_provider, message_handler, sample_slack_message_event
+        self, mock_client_class, message_handler, sample_slack_message_event
     ):
         """Test handling message with matching keyword."""
-        # Mock LLM provider
-        mock_provider = Mock()
-        mock_provider.generate_response.return_value = "test response from Claude"
-        mock_create_provider.return_value = mock_provider
+        # Mock LLM client
+        mock_client = Mock()
+        mock_client.generate_response.return_value = "test response from Claude"
+        mock_client_class.return_value = mock_client
 
         say = Mock()
         client = Mock()
@@ -119,15 +119,15 @@ class TestMessageHandler:
         # Should be ignored
         say.assert_not_called()
 
-    @patch("src.handlers.message_handler.create_llm_provider")
+    @patch("src.handlers.message_handler.OpenRouterClient")
     def test_handle_message_thread_reply(
-        self, mock_create_provider, message_handler, sample_slack_message_event
+        self, mock_client_class, message_handler, sample_slack_message_event
     ):
         """Test replying in thread."""
-        # Mock LLM provider
-        mock_provider = Mock()
-        mock_provider.generate_response.return_value = "test response"
-        mock_create_provider.return_value = mock_provider
+        # Mock LLM client
+        mock_client = Mock()
+        mock_client.generate_response.return_value = "test response"
+        mock_client_class.return_value = mock_client
 
         say = Mock()
         client = Mock()
@@ -156,21 +156,21 @@ class TestMessageHandler:
         # Should be ignored due to length
         say.assert_not_called()
 
-    @patch("src.handlers.message_handler.create_llm_provider")
+    @patch("src.handlers.message_handler.OpenRouterClient")
     @patch("src.handlers.message_handler.extract_message_images")
     def test_handle_message_with_image(
         self,
         mock_extract_images,
-        mock_create_provider,
+        mock_client_class,
         message_handler,
         sample_slack_image_event,
         sample_image_info,
     ):
         """Test handling message with image."""
-        # Mock LLM provider
-        mock_provider = Mock()
-        mock_provider.generate_response.return_value = "image analysis response"
-        mock_create_provider.return_value = mock_provider
+        # Mock LLM client
+        mock_client = Mock()
+        mock_client.generate_response.return_value = "image analysis response"
+        mock_client_class.return_value = mock_client
 
         # Mock image extraction
         mock_extract_images.return_value = [sample_image_info]
@@ -180,7 +180,7 @@ class TestMessageHandler:
         event["channel"] = "C54321"  # Image analysis channel from fixture
 
         # Need to add the image channel to config
-        from src.utils.config import ChannelConfig, BedrockConfig, ResponseConfig
+        from src.utils.config import ChannelConfig, LLMConfig, ResponseConfig
 
         image_channel = ChannelConfig(
             channel_id="C54321",
@@ -188,7 +188,7 @@ class TestMessageHandler:
             enabled=True,
             keywords=[],
             require_image=True,
-            bedrock=BedrockConfig(model_id="test-model"),
+            llm=LLMConfig(api_key="test-key", model="test-model"),
             system_prompt="Analyze images",
             response=ResponseConfig(),
         )
@@ -212,7 +212,7 @@ class TestMessageHandler:
         mock_extract_images.return_value = []
 
         # Create image-required channel
-        from src.utils.config import ChannelConfig, BedrockConfig, ResponseConfig
+        from src.utils.config import ChannelConfig, LLMConfig, ResponseConfig
 
         image_channel = ChannelConfig(
             channel_id="C12345",
@@ -220,7 +220,7 @@ class TestMessageHandler:
             enabled=True,
             keywords=[],
             require_image=True,
-            bedrock=BedrockConfig(model_id="test-model"),
+            llm=LLMConfig(api_key="test-key", model="test-model"),
             system_prompt="Test",
             response=ResponseConfig(),
         )
@@ -236,15 +236,13 @@ class TestMessageHandler:
         # Should not respond (no image)
         say.assert_not_called()
 
-    @patch("src.handlers.message_handler.create_llm_provider")
+    @patch("src.handlers.message_handler.OpenRouterClient")
     def test_generate_response_error_handling(
-        self, mock_create_provider, message_handler
+        self, mock_client_class, message_handler
     ):
         """Test error handling in response generation."""
-        # Make provider return None (error case)
-        mock_provider = Mock()
-        mock_provider.generate_response.return_value = None
-        mock_create_provider.return_value = mock_provider
+        # Make client raise exception (error case)
+        mock_client_class.side_effect = Exception("LLM error")
 
         say = Mock()
         client = Mock()

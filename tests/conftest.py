@@ -13,25 +13,25 @@ from src.utils.config import (
     AppConfig,
     ChannelConfig,
     SlashCommandConfig,
-    BedrockConfig,
+    LLMConfig,
     ResponseConfig,
     GlobalSettings,
 )
 
 
 @pytest.fixture
-def sample_bedrock_config():
-    """Sample Bedrock configuration."""
-    return BedrockConfig(
-        model_id="anthropic.claude-3-5-sonnet-20241022-v2:0",
-        region="us-east-1",
+def sample_llm_config():
+    """Sample LLM configuration."""
+    return LLMConfig(
+        api_key="test-api-key",
+        model="anthropic/claude-3.5-sonnet",
         max_tokens=1024,
         temperature=0.7,
     )
 
 
 @pytest.fixture
-def sample_channel_config(sample_bedrock_config):
+def sample_channel_config(sample_llm_config):
     """Sample channel configuration."""
     return ChannelConfig(
         channel_id="C12345",
@@ -40,14 +40,14 @@ def sample_channel_config(sample_bedrock_config):
         keywords=["help", "issue"],
         case_sensitive=False,
         require_image=False,
-        bedrock=sample_bedrock_config,
+        llm=sample_llm_config,
         system_prompt="You are a helpful assistant.",
         response=ResponseConfig(thread_reply=True, add_reaction="eyes"),
     )
 
 
 @pytest.fixture
-def sample_image_channel_config(sample_bedrock_config):
+def sample_image_channel_config(sample_llm_config):
     """Sample image analysis channel configuration."""
     return ChannelConfig(
         channel_id="C54321",
@@ -56,20 +56,20 @@ def sample_image_channel_config(sample_bedrock_config):
         keywords=[],
         case_sensitive=False,
         require_image=True,
-        bedrock=sample_bedrock_config,
+        llm=sample_llm_config,
         system_prompt="You are an image analysis expert.",
         response=ResponseConfig(thread_reply=True, add_reaction="camera"),
     )
 
 
 @pytest.fixture
-def sample_command_config(sample_bedrock_config):
+def sample_command_config(sample_llm_config):
     """Sample slash command configuration."""
     return SlashCommandConfig(
         command="/analyze",
         description="Analyze text with AI",
         enabled=True,
-        bedrock=sample_bedrock_config,
+        llm=sample_llm_config,
         system_prompt="You are an analytical assistant.",
     )
 

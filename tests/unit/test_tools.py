@@ -191,8 +191,8 @@ class TestCommandHandlerWithTools:
     """Tests for command handler with tool integration."""
 
     @responses.activate
-    @patch("src.handlers.command_handler.create_llm_provider")
-    def test_command_with_tool_execution(self, mock_create_provider):
+    @patch("src.handlers.command_handler.OpenRouterClient")
+    def test_command_with_tool_execution(self, mock_client_class):
         """Test that tools are executed before LLM invocation."""
         # Import here to avoid circular imports in tests
         from src.handlers.command_handler import CommandHandler
@@ -231,19 +231,18 @@ class TestCommandHandlerWithTools:
             status=200,
         )
 
-        # Create mock LLM provider
-        mock_provider = Mock()
-        mock_provider.generate_response.return_value = "Wear layers and stay hydrated!"
-        mock_create_provider.return_value = mock_provider
+        # Create mock LLM client
+        mock_client = Mock()
+        mock_client.generate_response.return_value = "Wear layers and stay hydrated!"
+        mock_client_class.return_value = mock_client
 
         # Create config with tool
         command_config = SlashCommandConfig(
             command="/run",
             description="Running advice",
             llm=LLMConfig(
-                provider="anthropic",
-                model="claude-3-5-sonnet-20241022",
                 api_key="test_key",
+                model="anthropic/claude-3.5-sonnet",
             ),
             system_prompt="You are a running coach.",
             tools=[
@@ -277,9 +276,9 @@ class TestCommandHandlerWithTools:
         # Verify ack was called
         ack.assert_called_once()
 
-        # Verify LLM provider was called with enriched system prompt
-        mock_provider.generate_response.assert_called_once()
-        call_kwargs = mock_provider.generate_response.call_args.kwargs
+        # Verify LLM client was called with enriched system prompt
+        mock_client.generate_response.assert_called_once()
+        call_kwargs = mock_client.generate_response.call_args.kwargs
 
         # System prompt should include weather data
         system_prompt = call_kwargs["system_prompt"]
