@@ -1,14 +1,11 @@
 """Integration tests for vision/image processing capabilities."""
 
-import base64
-import json
 from unittest.mock import Mock, patch, MagicMock
 
 import pytest
 import responses
 
 from src.handlers.message_handler import MessageHandler
-from src.services.bedrock_client import BedrockClient
 from src.utils.config import (
     AppConfig,
     ChannelConfig,
@@ -52,22 +49,14 @@ class TestVisionIntegration:
     """Integration tests for vision capabilities."""
 
     @responses.activate
-    @patch("src.services.bedrock_client.boto3")
     @patch("src.handlers.message_handler.OpenRouterClient")
     def test_complete_image_workflow(
         self,
         mock_client_class,
-        mock_boto3,
         vision_app_config,
         sample_image_bytes,
-        mock_bedrock_vision_response,
     ):
         """Test complete workflow: Slack image -> OpenRouter vision -> Response."""
-        # Setup Bedrock mock
-        mock_bedrock = MagicMock()
-        mock_bedrock.invoke_model.return_value = mock_bedrock_vision_response
-        mock_boto3.client.return_value = mock_bedrock
-
         # Mock LLM client
         mock_client = MagicMock()
         mock_client.generate_response.return_value = (
@@ -129,8 +118,8 @@ class TestVisionIntegration:
         messages = provider_call.kwargs["messages"]
         assert len(messages) == 1
         content = messages[0]["content"]
-        # Should have image and text
-        assert len([c for c in content if c["type"] == "image"]) >= 1
+        # Should have image_url and text (OpenRouter/OpenAI format)
+        assert len([c for c in content if c["type"] == "image_url"]) >= 1
         assert len([c for c in content if c["type"] == "text"]) >= 1
 
         # Verify response was sent
@@ -138,22 +127,14 @@ class TestVisionIntegration:
         assert say.call_args.kwargs["thread_ts"] == "1234567890.123456"
 
     @responses.activate
-    @patch("src.services.bedrock_client.boto3")
     @patch("src.handlers.message_handler.OpenRouterClient")
     def test_multiple_images_workflow(
         self,
         mock_client_class,
-        mock_boto3,
         vision_app_config,
         sample_image_bytes,
-        mock_bedrock_vision_response,
     ):
         """Test handling multiple images in one message."""
-        # Setup Bedrock mock
-        mock_bedrock = MagicMock()
-        mock_bedrock.invoke_model.return_value = mock_bedrock_vision_response
-        mock_boto3.client.return_value = mock_bedrock
-
         # Mock LLM client
         mock_client = MagicMock()
         mock_client.generate_response.return_value = "Multi-image comparison response"
@@ -207,25 +188,23 @@ class TestVisionIntegration:
         # Should have 2 images + 1 text = 3 content blocks
         assert len(messages[0]["content"]) == 3
 
-        # Verify we have 2 images
-        images = [c for c in messages[0]["content"] if c["type"] == "image"]
+        # Verify we have 2 images (image_url format for OpenRouter/OpenAI)
+        images = [c for c in messages[0]["content"] if c["type"] == "image_url"]
         assert len(images) == 2
 
-    @patch("src.services.bedrock_client.boto3")
-    def test_vision_error_handling(self, mock_boto3, vision_app_config):
+    @responses.activate
+    @patch("src.handlers.message_handler.OpenRouterClient")
+    def test_vision_error_handling(
+        self,
+        mock_client_class,
+        vision_app_config,
+        sample_image_bytes,
+    ):
         """Test error handling in vision workflow."""
-        # Setup Bedrock to fail
-        mock_bedrock = MagicMock()
-        from botocore.exceptions import ClientError
-
-        mock_bedrock.invoke_model.side_effect = ClientError(
-            {"Error": {"Code": "ValidationException", "Message": "Invalid input"}},
-            "InvokeModel",
-        )
-        mock_boto3.client.return_value = mock_bedrock
-
-        bedrock_client = BedrockClient(region="us-east-1")
-        bedrock_client.client = mock_bedrock
+        # Setup LLM client to fail
+        mock_client = MagicMock()
+        mock_client.generate_response.side_effect = Exception("API error")
+        mock_client_class.return_value = mock_client
 
         app = MagicMock()
         handler = MessageHandler(
@@ -235,58 +214,37 @@ class TestVisionIntegration:
             bot_token="xoxb-test-token",
         )
 
-        # Create message with image
-        with responses.RequestsMock() as rsps:
-            rsps.add(
-                responses.GET,
-                "https://files.slack.com/image.png",
-                body=b"fake_image_data",
-                status=200,
-            )
+        # Mock file download
+        responses.add(
+            responses.GET,
+            "https://files.slack.com/image.png",
+            body=sample_image_bytes,
+            status=200,
+        )
 
-            event = {
-                "type": "message",
-                "user": "U_USER",
-                "text": "Review this",
-                "channel": "C_VISION",
-                "ts": "123",
-                "files": [
-                    {
-                        "name": "image.png",
-                        "mimetype": "image/png",
-                        "url_private": "https://files.slack.com/image.png",
-                    }
-                ],
-            }
-
-            say = Mock()
-            client = Mock()
-            client.reactions_add = Mock()
-
-            handler.handle_message(event, say, client)
-
-            # Should handle error gracefully (not crash)
-            # Should not send response on error
-            say.assert_not_called()
-
-    @pytest.mark.parametrize(
-        "mimetype,expected",
-        [
-            ("image/png", "image/png"),
-            ("image/jpeg", "image/jpeg"),
-            ("image/webp", "image/webp"),
-            ("image/gif", "image/gif"),
-        ],
-    )
-    def test_image_mimetype_preservation(self, mimetype, expected):
-        """Test that different image MIME types are preserved."""
-        client = BedrockClient()
-        image_info = {
-            "data": b"fake_image_data",
-            "mimetype": mimetype,
-            "filename": f"test.{mimetype.split('/')[-1]}",
+        event = {
+            "type": "message",
+            "user": "U_USER",
+            "text": "Review this",
+            "channel": "C_VISION",
+            "ts": "123",
+            "files": [
+                {
+                    "name": "image.png",
+                    "mimetype": "image/png",
+                    "url_private": "https://files.slack.com/image.png",
+                }
+            ],
         }
 
-        message = client.format_message("Test", images=[image_info])
+        say = Mock()
+        client = Mock()
+        client.reactions_add = Mock()
 
-        assert message["content"][0]["source"]["media_type"] == expected
+        handler.handle_message(event, say, client)
+
+        # Should handle error gracefully (not crash)
+        # Reaction should still be added before LLM call
+        client.reactions_add.assert_called_once()
+        # Should not send response on error
+        say.assert_not_called()

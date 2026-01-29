@@ -1,23 +1,23 @@
-# Slack Listener with Multi-LLM Support
+# Slack Listener with OpenRouter LLM Support
 
-A Python Slack application that listens to configured channels for keywords and images, then uses multiple LLM providers (AWS Bedrock, Anthropic, OpenAI) to generate intelligent responses. Supports both passive channel monitoring and slash commands.
+A Python Slack application that listens to configured channels for keywords and images, then uses OpenRouter to access multiple LLM providers (Anthropic Claude, OpenAI GPT, etc.) to generate intelligent responses. Supports both passive channel monitoring and slash commands.
 
 ## Features
 
 - **Channel Monitoring**: Listen to specific Slack channels and respond based on keyword triggers
 - **Image Analysis**: Process messages with images using Claude's vision capabilities
 - **Slash Commands**: Create custom slash commands for explicit user invocations
-- **Multiple LLM Providers**: Choose from AWS Bedrock, Anthropic Direct API, or OpenAI
-  - AWS Bedrock (Claude, cross-region inference)
-  - Anthropic Direct API (Claude 3.5 Sonnet, Haiku, etc.)
+- **OpenRouter Integration**: Access multiple LLM providers through a single API
+  - Anthropic Claude (Claude 3.5 Sonnet, Haiku, Opus)
   - OpenAI (GPT-4o, GPT-4, etc.)
+  - Many other models via OpenRouter
 - **Flexible Configuration**: YAML-based configuration for easy management of channels and responses
 - **Thread Responses**: Reply in threads to keep channels organized
 - **Reaction Support**: Add emoji reactions to messages being processed
 
 ## Vision & Image Analysis
 
-The application fully supports **Claude's vision capabilities** through AWS Bedrock, allowing you to:
+The application fully supports **Claude's vision capabilities** through OpenRouter, allowing you to:
 
 ### Supported Image Formats
 - **JPEG** (.jpg, .jpeg)
@@ -25,7 +25,7 @@ The application fully supports **Claude's vision capabilities** through AWS Bedr
 - **WebP** (.webp)
 - **GIF** (.gif)
 
-The application automatically detects the correct MIME type from Slack and forwards it to Bedrock.
+The application automatically detects the correct MIME type from Slack and forwards it to the LLM.
 
 ### Image Use Cases
 
@@ -43,8 +43,8 @@ Configure channels to analyze images for various purposes:
 1. User uploads an image to a monitored Slack channel
 2. Bot downloads the image with proper authentication
 3. Image is base64-encoded with correct MIME type
-4. Sent to Claude via AWS Bedrock with your system prompt
-5. Claude analyzes the image and generates a response
+4. Sent to the LLM via OpenRouter with your system prompt
+5. LLM analyzes the image and generates a response
 6. Response posted back to Slack (typically in thread)
 
 See `config/config.example.yaml` for complete examples of image analysis channels.
@@ -86,15 +86,34 @@ tools:
 - Travel preparation
 - Event planning
 
+#### RSS Feed Tool
+
+Fetches and tracks RSS feed articles, returning only new stories.
+
+**Configuration:**
+```yaml
+tools:
+  - type: "rssfeed"
+    feed_urls:
+      - "https://feeds.bbci.co.uk/news/technology/rss.xml"
+      - "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"
+    data_file: "data/news_seen_articles.json"  # Persistent storage
+    max_stories: 10
+```
+
+**Use Cases:**
+- News summarization (`/news` command)
+- Content monitoring
+- Feed aggregation
+
 **Example Integration:**
 ```yaml
 slash_commands:
   - command: "/run"
     description: "Get running advice based on current weather"
     llm:
-      provider: "anthropic"
-      model: "claude-3-5-sonnet-20241022"
-      api_key: "${ANTHROPIC_API_KEY}"
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "anthropic/claude-3.5-sonnet"
       max_tokens: 1024
       temperature: 0.7
     system_prompt: |
@@ -160,43 +179,30 @@ tools:
     param2: 123
 ```
 
-## LLM Provider Options
+## OpenRouter
 
-The application supports three LLM providers. Choose the one that best fits your needs:
+The application uses [OpenRouter](https://openrouter.ai) as a unified gateway to access multiple LLM providers through a single API.
 
-### 1. AWS Bedrock
-**Best for**: Enterprise deployments, cross-region inference, AWS-integrated workflows
+### Why OpenRouter?
 
-- Access to Claude models through AWS infrastructure
-- Supports cross-region inference profiles
-- Requires AWS account and Bedrock access
-- Models: Claude 3.5 Sonnet, Haiku, Opus, etc.
+- **Single API**: Access Claude, GPT-4, and many other models with one API key
+- **Simple Setup**: No need to manage multiple provider accounts
+- **Model Flexibility**: Switch models by changing a single config value
+- **Cost Tracking**: Unified billing across all providers
 
-### 2. Anthropic Direct API
-**Best for**: Simplicity, latest Claude models, no AWS account needed
+### Available Models (via OpenRouter)
 
-- Direct API access to Anthropic's Claude models
-- Typically gets latest models first
-- Simpler authentication (just API key)
-- Models: Claude 3.5 Sonnet, Haiku, etc.
-
-### 3. OpenAI
-**Best for**: Access to GPT models, broad model selection
-
-- Access to GPT-4o, GPT-4, and other OpenAI models
-- Simple API key authentication
-- Models: GPT-4o, GPT-4-turbo, etc.
-
-You can configure different providers for different channels or commands!
+- `anthropic/claude-3.5-sonnet` - Balanced capability and speed
+- `anthropic/claude-3.5-haiku` - Fast and cost-effective
+- `openai/gpt-4o` - Latest GPT-4 with vision
+- `openai/gpt-4-turbo` - Fast GPT-4
+- Many more at https://openrouter.ai/models
 
 ## Prerequisites
 
 - Python 3.8 or higher
 - Slack workspace with admin permissions to create apps
-- At least one of the following LLM providers:
-  - **AWS Account** with Bedrock access (for Bedrock provider)
-  - **Anthropic API Key** (for Anthropic provider)
-  - **OpenAI API Key** (for OpenAI provider)
+- [OpenRouter API Key](https://openrouter.ai/keys)
 - Optional tool API keys:
   - **OpenWeatherMap API Key** (if using weather tool)
 
@@ -219,19 +225,9 @@ You can configure different providers for different channels or commands!
    pip install -r requirements.txt
    ```
 
-4. **Configure Your LLM Provider**:
-
-   **For AWS Bedrock**:
-   - Ensure you have AWS credentials configured
-   - Enable model access in AWS Bedrock console for the models you want to use
-
-   **For Anthropic Direct API**:
-   - Get an API key from https://console.anthropic.com/settings/keys
-   - Add to `.env` as `ANTHROPIC_API_KEY`
-
-   **For OpenAI**:
-   - Get an API key from https://platform.openai.com/api-keys
-   - Add to `.env` as `OPENAI_API_KEY`
+4. **Configure OpenRouter**:
+   - Get an API key from https://openrouter.ai/keys
+   - Add to `.env` as `OPENROUTER_API_KEY`
 
 ## Slack App Setup
 
@@ -264,7 +260,7 @@ You can configure different providers for different channels or commands!
 
 5. **Create Slash Commands** (optional):
    - Go to "Slash Commands"
-   - Create commands matching your `config.yaml` (e.g., `/analyze`, `/summarize`)
+   - Create commands matching your `config.yaml` (e.g., `/analyze`, `/summarize`, `/news`)
 
 6. **Install App to Workspace**:
    - Go to "Install App"
@@ -286,11 +282,7 @@ You can configure different providers for different channels or commands!
    ```bash
    SLACK_BOT_TOKEN=xoxb-your-token
    SLACK_APP_TOKEN=xapp-your-token
-
-   # Choose the provider(s) you want to use:
-   ANTHROPIC_API_KEY=sk-ant-your-key  # For Anthropic provider
-   OPENAI_API_KEY=sk-your-key         # For OpenAI provider
-   AWS_REGION=us-east-1               # For Bedrock provider
+   OPENROUTER_API_KEY=sk-or-v1-your-key
    ```
 
 2. **Application Configuration**:
@@ -301,13 +293,12 @@ You can configure different providers for different channels or commands!
    Edit `config/config.yaml` to configure:
    - Channels to monitor
    - Keywords to trigger on
-   - LLM provider and models to use
+   - LLM model to use
    - System prompts for each channel/command
    - Response behavior
 
-### Example Channel Configurations
+### Example Channel Configuration
 
-**Using Anthropic Direct API:**
 ```yaml
 channels:
   - channel_id: "C01234567"
@@ -315,49 +306,8 @@ channels:
     enabled: true
     keywords: ["help", "issue"]
     llm:
-      provider: "anthropic"
-      model: "claude-3-5-sonnet-20241022"
-      api_key: "${ANTHROPIC_API_KEY}"  # From .env file
-      max_tokens: 1024
-      temperature: 0.7
-    system_prompt: |
-      You are a helpful support assistant.
-    response:
-      thread_reply: true
-      add_reaction: "eyes"
-```
-
-**Using AWS Bedrock:**
-```yaml
-channels:
-  - channel_id: "C01234567"
-    channel_name: "support"
-    enabled: true
-    keywords: ["help", "issue"]
-    llm:
-      provider: "bedrock"
-      model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
-      region: "us-east-1"
-      max_tokens: 1024
-      temperature: 0.7
-    system_prompt: |
-      You are a helpful support assistant.
-    response:
-      thread_reply: true
-      add_reaction: "eyes"
-```
-
-**Using OpenAI:**
-```yaml
-channels:
-  - channel_id: "C01234567"
-    channel_name: "support"
-    enabled: true
-    keywords: ["help", "issue"]
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      api_key: "${OPENAI_API_KEY}"  # From .env file
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "anthropic/claude-3.5-sonnet"
       max_tokens: 1024
       temperature: 0.7
     system_prompt: |
@@ -389,12 +339,10 @@ channels:
 - `keywords`: List of keywords to trigger on (empty = all messages)
 - `case_sensitive`: Whether keyword matching is case-sensitive
 - `require_image`: Only respond to messages with images
-- `llm.provider`: LLM provider to use (`bedrock`, `anthropic`, or `openai`)
+- `llm.api_key`: OpenRouter API key
+- `llm.model`: OpenRouter model identifier
 - `llm.max_tokens`: Maximum tokens to generate
 - `llm.temperature`: Temperature for sampling (0-1)
-- **For Bedrock**: `llm.model_id`, `llm.region`
-- **For Anthropic**: `llm.model`, `llm.api_key`
-- **For OpenAI**: `llm.model`, `llm.api_key`
 - `system_prompt`: Instructions for the AI model
 - `tools`: List of tools to execute before LLM invocation (optional)
 - `response.thread_reply`: Reply in thread vs new message
@@ -413,33 +361,9 @@ channels:
 
 - `log_level`: Logging verbosity (DEBUG, INFO, WARNING, ERROR)
 - `max_message_length`: Maximum message length to process
-- `bedrock_timeout`: Timeout for Bedrock API calls
+- `llm_timeout`: Timeout for LLM API calls
 - `ignore_bot_messages`: Ignore messages from other bots
 - `ignore_self`: Ignore messages from this bot
-
-## Supported Models by Provider
-
-### AWS Bedrock
-
-- `anthropic.claude-3-5-sonnet-20241022-v2:0` - Latest Sonnet
-- `anthropic.claude-3-5-haiku-20241022-v1:0` - Fast Haiku
-- `anthropic.claude-3-opus-20240229-v1:0` - Most capable
-- `us.anthropic.claude-sonnet-4-5-20250929-v1:0` - Cross-region inference
-
-Enable model access in AWS Bedrock console before using.
-
-### Anthropic Direct API
-
-- `claude-3-5-sonnet-20241022` - Latest Sonnet
-- `claude-3-5-haiku-20241022` - Fast Haiku
-- `claude-3-opus-20240229` - Most capable
-
-### OpenAI
-
-- `gpt-4o` - Latest GPT-4 with vision
-- `gpt-4-turbo` - Fast GPT-4
-- `gpt-4` - Standard GPT-4
-- `gpt-3.5-turbo` - Fast and cost-effective
 
 ## Project Structure
 
@@ -450,19 +374,14 @@ slacklistener/
 │   │   ├── message_handler.py   # Channel message handling
 │   │   └── command_handler.py   # Slash command handling
 │   ├── llm/
-│   │   ├── provider.py          # LLM provider base class
-│   │   ├── factory.py           # Provider factory
-│   │   └── providers/
-│   │       ├── bedrock_provider.py   # AWS Bedrock implementation
-│   │       ├── anthropic_provider.py # Anthropic Direct API
-│   │       └── openai_provider.py    # OpenAI implementation
+│   │   ├── __init__.py          # OpenRouter client export
+│   │   └── openrouter.py        # OpenRouter LLM client
 │   ├── tools/
 │   │   ├── tool.py              # Tool base class
 │   │   ├── factory.py           # Tool factory
 │   │   └── implementations/
-│   │       └── openweathermap.py     # OpenWeatherMap tool
-│   ├── services/
-│   │   └── bedrock_client.py    # Legacy Bedrock client (deprecated)
+│   │       ├── openweathermap.py    # OpenWeatherMap tool
+│   │       └── rssfeed.py           # RSS Feed tool
 │   ├── utils/
 │   │   ├── config.py            # Configuration loading
 │   │   └── slack_helpers.py     # Slack utilities
@@ -470,6 +389,8 @@ slacklistener/
 ├── config/
 │   ├── config.yaml              # Your configuration (not in git)
 │   └── config.example.yaml      # Example configuration
+├── data/                        # Persistent data storage
+│   └── .gitkeep
 ├── requirements.txt             # Python dependencies
 ├── .env                         # Environment variables (not in git)
 ├── .env.example                 # Example environment file
@@ -485,24 +406,12 @@ slacklistener/
 3. Check keywords match the message content
 4. Review logs for errors
 
-### LLM Provider errors
+### LLM/OpenRouter errors
 
-**For AWS Bedrock:**
-1. Verify AWS credentials are configured correctly
-2. Ensure model access is enabled in Bedrock console
-3. Check `AWS_REGION` matches where you enabled models
-4. Verify IAM permissions include `bedrock:InvokeModel`
-5. For cross-region inference, use proper model ID format
-
-**For Anthropic:**
-1. Verify `ANTHROPIC_API_KEY` is set correctly
-2. Check API key has sufficient credits/permissions
-3. Ensure model name is correct (no `anthropic.` prefix)
-
-**For OpenAI:**
-1. Verify `OPENAI_API_KEY` is set correctly
+1. Verify `OPENROUTER_API_KEY` is set correctly
 2. Check API key has sufficient credits
-3. Ensure model name is correct
+3. Ensure model name matches OpenRouter format (e.g., `anthropic/claude-3.5-sonnet`)
+4. Check OpenRouter status at https://openrouter.ai/activity
 
 ### Socket Mode connection issues
 
@@ -542,6 +451,7 @@ docker run -d \
   --name slack-listener \
   --env-file .env \
   -v $(pwd)/config/config.yaml:/app/config/config.yaml:ro \
+  -v $(pwd)/data:/app/data \
   slack-listener
 
 # View logs
@@ -573,7 +483,7 @@ python -m src.app
 ### Adding New Features
 
 1. **New Handler**: Add to `src/handlers/`
-2. **New Service**: Add to `src/services/`
+2. **New Tool**: Add to `src/tools/implementations/` and register in factory
 3. **New Config Option**: Update `src/utils/config.py` with Pydantic models
 
 ### Testing
@@ -610,10 +520,11 @@ make test-cov
 tests/
 ├── unit/                      # Unit tests for individual components
 │   ├── test_config.py        # Configuration loading/validation
-│   ├── test_bedrock_client.py # Bedrock API integration
 │   ├── test_slack_helpers.py  # Slack utilities
 │   ├── test_message_handler.py # Message handling
-│   └── test_command_handler.py # Slash commands
+│   ├── test_command_handler.py # Slash commands
+│   ├── test_tools.py          # Tool implementations
+│   └── test_rssfeed_tool.py   # RSS Feed tool tests
 ├── integration/               # End-to-end integration tests
 │   └── test_vision_integration.py # Vision/image workflow tests
 └── conftest.py               # Shared fixtures
@@ -622,11 +533,11 @@ tests/
 #### Key Test Coverage
 
 - **Configuration**: YAML loading, validation, channel/command lookup
-- **Bedrock Client**: Claude API calls, image formatting, MIME type handling
 - **Vision Support**: Image download, base64 encoding, multi-image messages
 - **Message Handling**: Keyword matching, image detection, thread replies
 - **Slash Commands**: Command parsing, error handling, response generation
 - **Slack Helpers**: File downloads, image extraction, message filtering
+- **Tools**: OpenWeatherMap, RSS Feed tool implementations
 
 #### Writing New Tests
 
@@ -649,8 +560,7 @@ Use fixtures from `conftest.py` for common test data.
 ## Security Notes
 
 - **Never commit** `.env` or `config/config.yaml` (they contain secrets)
-- Use AWS IAM roles with minimum required permissions
-- Regularly rotate Slack tokens
+- Regularly rotate API keys and Slack tokens
 - Review which channels the bot has access to
 
 ## License

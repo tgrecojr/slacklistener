@@ -1,14 +1,11 @@
 """Pytest configuration and shared fixtures."""
 
 import base64
-import json
-from typing import Dict, Any
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock
 
 import pytest
 from slack_bolt import App
 
-from src.services.bedrock_client import BedrockClient
 from src.utils.config import (
     AppConfig,
     ChannelConfig,
@@ -94,14 +91,6 @@ def mock_slack_app():
 
 
 @pytest.fixture
-def mock_bedrock_client():
-    """Mock Bedrock client."""
-    client = MagicMock(spec=BedrockClient)
-    client.invoke_claude.return_value = "This is a test response from Claude."
-    return client
-
-
-@pytest.fixture
 def sample_slack_message_event():
     """Sample Slack message event."""
     return {
@@ -162,48 +151,4 @@ def sample_image_info(sample_image_bytes):
         "data": sample_image_bytes,
         "mimetype": "image/png",
         "filename": "test.png",
-    }
-
-
-@pytest.fixture
-def mock_bedrock_response():
-    """Mock successful Bedrock API response."""
-    return {
-        "body": Mock(
-            read=Mock(
-                return_value=json.dumps(
-                    {
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "This is a test response from Claude.",
-                            }
-                        ],
-                        "stop_reason": "end_turn",
-                    }
-                ).encode()
-            )
-        )
-    }
-
-
-@pytest.fixture
-def mock_bedrock_vision_response():
-    """Mock successful Bedrock vision API response."""
-    return {
-        "body": Mock(
-            read=Mock(
-                return_value=json.dumps(
-                    {
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "This image shows a red pixel. It appears to be a test image.",
-                            }
-                        ],
-                        "stop_reason": "end_turn",
-                    }
-                ).encode()
-            )
-        )
     }

@@ -35,6 +35,10 @@ htmlcov/
 config/config.yaml
 !config/config.example.yaml
 
+# Data directory (persistent state files)
+data/*.json
+!data/.gitkeep
+
 # OS
 .DS_Store
 Thumbs.db

@@ -237,9 +237,7 @@ class TestMessageHandler:
         say.assert_not_called()
 
     @patch("src.handlers.message_handler.OpenRouterClient")
-    def test_generate_response_error_handling(
-        self, mock_client_class, message_handler
-    ):
+    def test_generate_response_error_handling(self, mock_client_class, message_handler):
         """Test error handling in response generation."""
         # Make client raise exception (error case)
         mock_client_class.side_effect = Exception("LLM error")

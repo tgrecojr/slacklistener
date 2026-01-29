@@ -110,7 +110,7 @@ class TestCommandHandler:
         assert "not configured" in response_text.lower()
 
     @patch("src.handlers.command_handler.OpenRouterClient")
-    def test_handle_command_bedrock_error(
+    def test_handle_command_llm_error(
         self, mock_client_class, command_handler, sample_slack_command
     ):
         """Test handling LLM client errors."""

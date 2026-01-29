@@ -19,11 +19,11 @@ make test-cov
 
 The application has **comprehensive test coverage** including:
 
-- ✅ **Unit Tests**: Individual component testing
-- ✅ **Integration Tests**: End-to-end workflow testing
-- ✅ **Vision/Image Tests**: Complete image processing pipeline
-- ✅ **Mock Testing**: Slack and AWS Bedrock mocking
-- ✅ **Error Handling**: Edge cases and failure scenarios
+- Unit Tests: Individual component testing
+- Integration Tests: End-to-end workflow testing
+- Vision/Image Tests: Complete image processing pipeline
+- Mock Testing: Slack and LLM mocking
+- Error Handling: Edge cases and failure scenarios
 
 ## Running Tests
 
@@ -68,13 +68,13 @@ xdg-open htmlcov/index.html  # Linux
 ### Specific Test File
 
 ```bash
-pytest tests/unit/test_bedrock_client.py -v
+pytest tests/unit/test_tools.py -v
 ```
 
 ### Specific Test Function
 
 ```bash
-pytest tests/unit/test_bedrock_client.py::test_invoke_claude_success -v
+pytest tests/unit/test_tools.py::TestOpenWeatherMapTool::test_execute_success -v
 ```
 
 ### Run Tests Matching Pattern
@@ -93,10 +93,11 @@ tests/
 ├── unit/                              # Unit tests
 │   ├── __init__.py
 │   ├── test_config.py                 # Configuration loading/validation
-│   ├── test_bedrock_client.py         # AWS Bedrock client
 │   ├── test_slack_helpers.py          # Slack utilities
 │   ├── test_message_handler.py        # Message handling logic
-│   └── test_command_handler.py        # Slash command handling
+│   ├── test_command_handler.py        # Slash command handling
+│   ├── test_tools.py                  # OpenWeatherMap tool and factory
+│   └── test_rssfeed_tool.py           # RSS Feed tool tests
 └── integration/                       # Integration tests
     ├── __init__.py
     └── test_vision_integration.py     # Complete vision workflow
@@ -116,22 +117,17 @@ tests/
 pytest tests/unit/test_config.py -v
 ```
 
-### 2. Bedrock Client Tests (`test_bedrock_client.py`)
+### 2. Tool Tests (`test_tools.py`, `test_rssfeed_tool.py`)
 
-- Message formatting
-- Image encoding (base64)
-- MIME type preservation (PNG, JPEG, WebP, GIF)
-- API invocation
+Tests tool implementations and factory:
+- Tool initialization with various parameters
+- API interactions (mocked)
 - Error handling
-- Response parsing
-
-**Key Vision Tests:**
-- `test_format_message_with_image`: Single image formatting
-- `test_format_message_multiple_images`: Multiple images
-- `test_image_mimetype_preservation`: MIME type handling
+- Factory creation and validation
+- RSS feed parsing and tracking
 
 ```bash
-pytest tests/unit/test_bedrock_client.py -v
+pytest tests/unit/test_tools.py tests/unit/test_rssfeed_tool.py -v
 ```
 
 ### 3. Slack Helpers Tests (`test_slack_helpers.py`)
@@ -141,10 +137,6 @@ pytest tests/unit/test_bedrock_client.py -v
 - Image extraction from messages
 - Message filtering (bots, self, system messages)
 - Text formatting and truncation
-
-**Key Vision Tests:**
-- `test_extract_message_images_success`: Image download and extraction
-- `test_extract_message_images_multiple_formats`: PNG, JPEG, WebP support
 
 ```bash
 pytest tests/unit/test_slack_helpers.py -v
@@ -166,6 +158,7 @@ pytest tests/unit/test_message_handler.py -v
 ### 5. Command Handler Tests (`test_command_handler.py`)
 
 - Slash command parsing
+- Tool integration
 - Response generation
 - Error messages
 - Parameter validation
@@ -181,8 +174,8 @@ pytest tests/unit/test_command_handler.py -v
 1. Slack message with image arrives
 2. Image is downloaded from Slack
 3. Image is base64 encoded with correct MIME type
-4. Message sent to Bedrock with image data
-5. Claude analyzes the image
+4. Message sent to LLM via OpenRouter
+5. LLM analyzes the image
 6. Response posted back to Slack in thread
 
 ```bash
@@ -190,7 +183,7 @@ pytest tests/integration/test_vision_integration.py -v
 ```
 
 **Key Tests:**
-- `test_complete_image_workflow`: Full Slack → Bedrock → Slack flow
+- `test_complete_image_workflow`: Full Slack → LLM → Slack flow
 - `test_multiple_images_workflow`: Multiple images in one message
 - `test_vision_error_handling`: Graceful error handling
 
@@ -202,8 +195,8 @@ Fixtures provide reusable test data and mocks. Key fixtures in `conftest.py`:
 
 ```python
 @pytest.fixture
-def sample_bedrock_config():
-    """Bedrock configuration for testing."""
+def sample_llm_config():
+    """LLM configuration for testing."""
 
 @pytest.fixture
 def sample_channel_config():
@@ -220,10 +213,6 @@ def sample_image_channel_config():
 @pytest.fixture
 def mock_slack_app():
     """Mock Slack Bolt application."""
-
-@pytest.fixture
-def mock_bedrock_client():
-    """Mock Bedrock client with canned responses."""
 ```
 
 ### Test Data Fixtures
@@ -236,10 +225,6 @@ def sample_image_bytes():
 @pytest.fixture
 def sample_image_info():
     """Image data with MIME type and filename."""
-
-@pytest.fixture
-def mock_bedrock_vision_response():
-    """Mock successful vision API response."""
 ```
 
 ## Writing New Tests
@@ -291,38 +276,24 @@ def test_with_custom_fixture(my_custom_fixture):
     assert my_custom_fixture["key"] == "value"
 ```
 
-### 4. Test Vision Features
-
-```python
-def test_image_processing(sample_image_info, mock_bedrock_client):
-    """Test image processing."""
-    from src.services.bedrock_client import BedrockClient
-
-    client = BedrockClient()
-    message = client.format_message("Analyze this", images=[sample_image_info])
-
-    # Verify image content
-    assert message["content"][0]["type"] == "image"
-    assert message["content"][0]["source"]["media_type"] == "image/png"
-```
-
 ## Mocking
 
-### Mocking AWS Bedrock
+### Mocking OpenRouter Client
 
 ```python
 from unittest.mock import patch, MagicMock
 
-@patch("src.services.bedrock_client.boto3")
-def test_with_bedrock_mock(mock_boto3):
-    """Test with mocked Bedrock."""
+@patch("src.handlers.message_handler.OpenRouterClient")
+def test_with_llm_mock(mock_client_class):
+    """Test with mocked LLM client."""
     mock_client = MagicMock()
-    mock_client.invoke_model.return_value = {
-        "body": Mock(read=Mock(return_value=b'{"content": [{"text": "Response"}]}'))
-    }
-    mock_boto3.client.return_value = mock_client
+    mock_client.generate_response.return_value = "Test response"
+    mock_client_class.return_value = mock_client
 
     # Your test code here
+
+    # Verify LLM was called
+    mock_client.generate_response.assert_called_once()
 ```
 
 ### Mocking Slack
@@ -416,7 +387,7 @@ pytest -m "not slow"
 
 1. **Test One Thing**: Each test should verify one specific behavior
 2. **Use Fixtures**: Reuse test data via fixtures
-3. **Mock External Services**: Don't call real AWS or Slack APIs
+3. **Mock External Services**: Don't call real APIs
 4. **Test Edge Cases**: Empty inputs, None values, errors
 5. **Descriptive Names**: `test_image_with_png_mimetype_preserves_format`
 6. **AAA Pattern**: Arrange, Act, Assert
@@ -427,7 +398,7 @@ pytest -m "not slow"
 ### Run with Print Statements
 
 ```bash
-pytest -s tests/unit/test_bedrock_client.py
+pytest -s tests/unit/test_tools.py
 ```
 
 ### Drop into Debugger on Failure

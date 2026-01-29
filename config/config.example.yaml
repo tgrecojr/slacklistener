@@ -244,6 +244,30 @@ slash_commands:
         units: "imperial"  # imperial (F), metric (C), or standard (K)
         language: "en"
 
+  # Example: /news command for RSS news summarization
+  - command: "/news"
+    description: "Get a summary of the latest news from configured RSS feeds"
+    enabled: true
+
+    llm:
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "anthropic/claude-3.5-sonnet"
+      max_tokens: 2048
+      temperature: 0.5
+
+    system_prompt: |
+      You are a news summarizer. Create a concise summary of the key news items.
+      Group related stories together, highlight the most important ones first,
+      and use bullet points for easy reading. Keep the summary under 300 words.
+
+    tools:
+      - type: "rssfeed"
+        feed_urls:
+          - "https://feeds.bbci.co.uk/news/technology/rss.xml"
+          - "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"
+        data_file: "data/news_seen_articles.json"
+        max_stories: 10
+
 # Global settings
 settings:
   # Log level: DEBUG, INFO, WARNING, ERROR
