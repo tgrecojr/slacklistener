@@ -47,10 +47,18 @@ cp config/config.example.yaml config/config.yaml
 ```bash
 SLACK_BOT_TOKEN=xoxb-your-actual-token-here
 SLACK_APP_TOKEN=xapp-your-actual-token-here
-AWS_REGION=us-east-1
+OPENROUTER_API_KEY=sk-or-v1-your-openrouter-key-here
 ```
 
-## 3. Get Channel IDs
+## 3. Get OpenRouter API Key
+
+1. Go to https://openrouter.ai/keys
+2. Create an account if needed
+3. Click **"Create Key"**
+4. Copy the API key (starts with `sk-or-`)
+5. Add to `.env` as `OPENROUTER_API_KEY`
+
+## 4. Get Channel IDs
 
 ### Method 1: From Slack Desktop/Web
 1. Open the channel in Slack
@@ -69,30 +77,6 @@ In each channel you want to monitor:
 /invite @YourBotName
 ```
 
-## 4. Configure AWS Bedrock
-
-### Setup AWS Credentials
-```bash
-# Option 1: AWS CLI (recommended)
-aws configure
-
-# Option 2: Environment variables in .env
-AWS_ACCESS_KEY_ID=your-key
-AWS_SECRET_ACCESS_KEY=your-secret
-AWS_REGION=us-east-1
-```
-
-### Enable Model Access
-1. Go to AWS Console → Bedrock
-2. Click **"Model access"** in sidebar
-3. Click **"Enable specific models"**
-4. Select:
-   - Anthropic Claude 3.5 Sonnet
-   - Anthropic Claude 3 Haiku (optional, cheaper/faster)
-5. Click **"Save changes"**
-
-Wait a few minutes for access to be granted.
-
 ## 5. Configure Your Bot
 
 Edit `config/config.yaml`:
@@ -105,9 +89,9 @@ channels:
     keywords:
       - "help"
       - "issue"
-    bedrock:
-      model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
-      region: "us-east-1"
+    llm:
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "anthropic/claude-3.5-sonnet"
       max_tokens: 1024
       temperature: 0.7
     system_prompt: |
@@ -142,7 +126,7 @@ INFO - Starting Slack Listener application...
 1. Go to your configured Slack channel
 2. Type a message with one of your keywords: `I need help with something`
 3. The bot should:
-   - Add a reaction (👀 by default)
+   - Add a reaction (eyes by default)
    - Reply in a thread with an AI-generated response
 
 ## Common Issues
@@ -166,17 +150,18 @@ cp .env.example .env
 3. Check message contains a configured keyword
 4. Look at logs for errors
 
-### "AWS Bedrock errors"
-1. Check AWS credentials: `aws sts get-caller-identity`
-2. Verify model access enabled in Bedrock console
-3. Ensure region in config matches where you enabled models
+### "OpenRouter API errors"
+1. Verify `OPENROUTER_API_KEY` is set correctly in `.env`
+2. Check API key has sufficient credits at https://openrouter.ai/activity
+3. Ensure model name is correct (e.g., `anthropic/claude-3.5-sonnet`)
 
 ## Next Steps
 
 - Add more channels to `config/config.yaml`
-- Create slash commands in Slack app settings
+- Create slash commands in Slack app settings (e.g., `/news`, `/analyze`)
 - Configure different AI models for different use cases
 - Customize system prompts for better responses
+- Add tools for context enrichment (weather, RSS feeds)
 
 ## Quick Reference
 
@@ -184,11 +169,12 @@ cp .env.example .env
 ```bash
 make setup    # Initial setup
 make run      # Run the application
+make test     # Run tests
 make clean    # Clean up cache files
 ```
 
 ### Configuration Files
-- `.env` - Slack tokens and AWS config
+- `.env` - Slack tokens and OpenRouter API key
 - `config/config.yaml` - Channels, commands, prompts
 
 ### Logs

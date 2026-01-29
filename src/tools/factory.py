@@ -56,5 +56,21 @@ def create_tool(tool_config: Dict[str, Any]) -> Tool:
             language=tool_config.get("language", "en"),
         )
 
+    elif tool_type == "rssfeed":
+        from .implementations.rssfeed import RSSFeedTool
+
+        # Validate required parameters
+        feed_urls = tool_config.get("feed_urls")
+        if not feed_urls or not isinstance(feed_urls, list) or len(feed_urls) == 0:
+            raise ValueError(
+                "RSSFeed tool requires 'feed_urls' parameter with at least one URL"
+            )
+
+        return RSSFeedTool(
+            feed_urls=feed_urls,
+            data_file=tool_config.get("data_file", "data/seen_articles.json"),
+            max_stories=tool_config.get("max_stories", 10),
+        )
+
     else:
         raise ValueError(f"Unknown tool type: {tool_type}")
