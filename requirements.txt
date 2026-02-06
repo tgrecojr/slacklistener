@@ -16,5 +16,5 @@ requests>=2.32.0
 # RSS Feed Parsing
 feedparser>=6.0.11
 
-# Prompt Injection Detection
-llm-guard[onnxruntime]>=0.3.10
+# Prompt Injection Detection (Meta LlamaFirewall)
+llamafirewall>=1.0.3

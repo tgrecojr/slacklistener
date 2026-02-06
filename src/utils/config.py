@@ -148,7 +148,7 @@ class GlobalSettings(BaseModel):
         default=True, description="Enable prompt injection scanning"
     )
     prompt_injection_threshold: float = Field(
-        default=0.92,
+        default=0.9,
         ge=0.0,
         le=1.0,
         description="Prompt injection detection threshold (0-1, higher = stricter)",

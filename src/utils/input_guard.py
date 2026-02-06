@@ -1,4 +1,4 @@
-"""Prompt injection detection using LLM-Guard."""
+"""Prompt injection detection using Meta LlamaFirewall."""
 
 import logging
 
@@ -8,17 +8,13 @@ logger = logging.getLogger(__name__)
 class InputGuard:
     """Screens user input for prompt injection attacks."""
 
-    def __init__(self, threshold: float = 0.92, use_onnx: bool = True):
-        from llm_guard.input_scanners import PromptInjection
-        from llm_guard.input_scanners.prompt_injection import MatchType
+    def __init__(self, threshold: float = 0.9):
+        from llamafirewall.scanners.promptguard_utils import PromptGuard
 
-        self._scanner = PromptInjection(
-            threshold=threshold,
-            match_type=MatchType.FULL,
-            use_onnx=use_onnx,
-        )
-        # Warmup: triggers model download/load on first call
-        self._scanner.scan("warmup")
+        self._prompt_guard = PromptGuard()
+        self._threshold = threshold
+        # Warmup: trigger model load + first inference
+        self._prompt_guard.get_jailbreak_score("warmup")
         logger.info("InputGuard initialized (threshold=%.2f)", threshold)
 
     def scan(self, text: str) -> tuple[bool, float]:
@@ -31,11 +27,12 @@ class InputGuard:
         if not text or not text.strip():
             return True, 0.0
 
-        _, is_valid, risk_score = self._scanner.scan(text)
-        if not is_valid:
+        risk_score = self._prompt_guard.get_jailbreak_score(text)
+        is_safe = risk_score < self._threshold
+        if not is_safe:
             logger.warning(
                 "Prompt injection detected (score=%.3f): %.80s...",
                 risk_score,
                 text,
             )
-        return is_valid, risk_score
+        return is_safe, risk_score

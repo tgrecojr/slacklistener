@@ -287,4 +287,4 @@ settings:
 
   # Prompt injection scanning
   prompt_guard_enabled: true           # Enable prompt injection scanning
-  prompt_injection_threshold: 0.92     # 0-1, higher = stricter (default 0.92)
+  prompt_injection_threshold: 0.9      # 0-1, higher = stricter (default 0.9)
