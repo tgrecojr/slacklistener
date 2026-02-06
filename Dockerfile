@@ -5,6 +5,7 @@ FROM python:3.14-slim@sha256:fa0acdcd760f0bf265bc2c1ee6120776c4d92a9c3a37289e17b
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
+    libc6-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create virtual environment
