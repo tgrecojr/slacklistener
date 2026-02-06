@@ -3,7 +3,7 @@
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -59,7 +59,9 @@ class RSSFeedTool(Tool):
 
             for feed_url in self.feed_urls:
                 try:
-                    stories, story_ids = self._fetch_feed(feed_url, seen_ids)
+                    stories, story_ids = self._fetch_feed(
+                        feed_url, set(seen_ids.keys())
+                    )
                     new_stories.extend(stories)
                     new_ids.update(story_ids)
                 except Exception as e:
@@ -74,8 +76,11 @@ class RSSFeedTool(Tool):
             new_stories.sort(key=lambda x: x.get("published", ""), reverse=True)
             limited_stories = new_stories[: self.max_stories]
 
-            # Mark these stories as seen
-            all_seen = seen_ids.union(new_ids)
+            # Mark these stories as seen with current timestamp
+            now = datetime.now().isoformat()
+            all_seen = dict(seen_ids)
+            for new_id in new_ids:
+                all_seen[new_id] = now
             self._save_seen_ids(all_seen)
 
             # Format for LLM
@@ -90,19 +95,61 @@ class RSSFeedTool(Tool):
             logger.error(f"Error processing RSS feeds: {e}", exc_info=True)
             return f"Error: Could not fetch RSS feeds - {str(e)}"
 
-    def _load_seen_ids(self) -> set:
-        """Load previously seen article IDs from storage."""
+    def _load_seen_ids(self) -> dict:
+        """Load previously seen article IDs from storage.
+
+        Returns:
+            Dict mapping article ID to ISO timestamp string.
+            Migrates old list format to new dict format.
+            Prunes entries older than 7 days.
+        """
+        seen = {}
         try:
             if os.path.exists(self.data_file):
                 with open(self.data_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    return set(data.get("seen_ids", []))
+                    raw = data.get("seen_ids", {})
+
+                    if isinstance(raw, list):
+                        # Migrate old format: list -> dict with current timestamp
+                        now = datetime.now().isoformat()
+                        seen = {article_id: now for article_id in raw}
+                        logger.info(
+                            f"Migrated {len(seen)} seen IDs from old list format"
+                        )
+                    elif isinstance(raw, dict):
+                        seen = raw
+                    else:
+                        seen = {}
+
         except Exception as e:
             logger.warning(f"Could not load seen IDs from {self.data_file}: {e}")
-        return set()
+            return {}
 
-    def _save_seen_ids(self, seen_ids: set) -> None:
-        """Save seen article IDs to storage."""
+        # Prune entries older than 7 days
+        cutoff = datetime.now() - timedelta(days=7)
+        pruned = {}
+        for article_id, ts_str in seen.items():
+            try:
+                ts = datetime.fromisoformat(ts_str)
+                if ts >= cutoff:
+                    pruned[article_id] = ts_str
+            except (ValueError, TypeError):
+                # Keep entries with unparseable timestamps (safer default)
+                pruned[article_id] = ts_str
+
+        pruned_count = len(seen) - len(pruned)
+        if pruned_count > 0:
+            logger.info(f"Pruned {pruned_count} expired seen article(s)")
+
+        return pruned
+
+    def _save_seen_ids(self, seen_ids: dict) -> None:
+        """Save seen article IDs to storage.
+
+        Args:
+            seen_ids: Dict mapping article ID to ISO timestamp string.
+        """
         try:
             # Ensure directory exists
             Path(self.data_file).parent.mkdir(parents=True, exist_ok=True)
@@ -110,7 +157,7 @@ class RSSFeedTool(Tool):
             with open(self.data_file, "w", encoding="utf-8") as f:
                 json.dump(
                     {
-                        "seen_ids": list(seen_ids),
+                        "seen_ids": seen_ids,
                         "last_updated": datetime.now().isoformat(),
                     },
                     f,

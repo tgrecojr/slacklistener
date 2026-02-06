@@ -18,6 +18,7 @@ class OpenRouterClient:
         base_url: str = "https://openrouter.ai/api/v1",
         site_url: str = "https://github.com/tgrecojr/slacklistener",
         site_name: str = "slacklistener",
+        timeout: Optional[int] = None,
     ):
         """
         Initialize OpenRouter client.
@@ -28,14 +29,18 @@ class OpenRouterClient:
             base_url: OpenRouter API base URL
             site_url: App URL for OpenRouter attribution (shown in rankings)
             site_name: App name for OpenRouter attribution (shown in console)
+            timeout: API request timeout in seconds
         """
         self.model = model
         self.site_url = site_url
         self.site_name = site_name
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url=base_url,
-        )
+        client_kwargs = {
+            "api_key": api_key,
+            "base_url": base_url,
+        }
+        if timeout is not None:
+            client_kwargs["timeout"] = timeout
+        self.client = OpenAI(**client_kwargs)
         logger.info(
             f"Initialized OpenRouter client with model: {model}, site: {site_name}"
         )

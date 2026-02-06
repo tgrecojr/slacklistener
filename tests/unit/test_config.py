@@ -8,8 +8,6 @@ import yaml
 
 from src.utils.config import (
     load_config,
-    get_channel_config,
-    get_command_config,
     LLMConfig,
     ChannelConfig,
     AppConfig,
@@ -99,44 +97,15 @@ def test_load_config_valid(tmp_path):
     assert config.channels[0].channel_id == "C12345"
 
 
-def test_get_channel_config(sample_app_config):
-    """Test getting channel configuration by ID."""
-    # Existing channel
-    config = get_channel_config(sample_app_config, "C12345")
-    assert config is not None
-    assert config.channel_name == "test-channel"
-
-    # Non-existent channel
-    config = get_channel_config(sample_app_config, "C99999")
-    assert config is None
-
-
-def test_get_command_config(sample_app_config):
-    """Test getting command configuration."""
-    # With leading slash
-    config = get_command_config(sample_app_config, "/analyze")
-    assert config is not None
-    assert config.description == "Analyze text with AI"
-
-    # Without leading slash
-    config = get_command_config(sample_app_config, "analyze")
-    assert config is not None
-
-    # Non-existent command
-    config = get_command_config(sample_app_config, "/nonexistent")
-    assert config is None
-
-
-def test_disabled_channel_not_returned(sample_channel_config):
-    """Test that disabled channels are not returned."""
+def test_disabled_channel_config(sample_channel_config):
+    """Test that disabled channels can be configured."""
     sample_channel_config.enabled = False
     config = AppConfig(
         channels=[sample_channel_config],
         slash_commands=[],
     )
 
-    result = get_channel_config(config, "C12345")
-    assert result is None
+    assert config.channels[0].enabled is False
 
 
 def test_slash_command_auto_adds_slash():

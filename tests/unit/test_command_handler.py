@@ -181,6 +181,42 @@ class TestCommandHandler:
         mock_client.generate_response.assert_called_once()
 
     @patch("src.handlers.command_handler.OpenRouterClient")
+    def test_generate_response_passes_timeout(
+        self, mock_client_class, command_handler, sample_command_config
+    ):
+        """Test that timeout from settings is passed to OpenRouterClient."""
+        mock_client = Mock()
+        mock_client.generate_response.return_value = "Test response"
+        mock_client_class.return_value = mock_client
+
+        command = {"user_id": "U123", "channel_id": "C123"}
+        command_handler._generate_response("Test", sample_command_config, command)
+
+        # Verify timeout was passed to OpenRouterClient constructor
+        mock_client_class.assert_called_once()
+        call_kwargs = mock_client_class.call_args.kwargs
+        assert call_kwargs["timeout"] == command_handler.config.settings.llm_timeout
+
+    @patch("src.handlers.command_handler.OpenRouterClient")
+    def test_client_is_cached_across_commands(
+        self, mock_client_class, command_handler, sample_slack_command
+    ):
+        """Test that the same OpenRouterClient is reused for the same command config."""
+        mock_client = Mock()
+        mock_client.generate_response.return_value = "response"
+        mock_client_class.return_value = mock_client
+
+        ack = Mock()
+        say = Mock()
+
+        # Run command twice
+        command_handler.handle_command(ack, sample_slack_command, say)
+        command_handler.handle_command(ack, sample_slack_command, say)
+
+        # Client should only be created once
+        assert mock_client_class.call_count == 1
+
+    @patch("src.handlers.command_handler.OpenRouterClient")
     def test_generate_response_uses_correct_params(
         self, mock_client_class, command_handler, sample_command_config
     ):
