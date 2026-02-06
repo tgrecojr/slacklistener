@@ -425,6 +425,13 @@ slacklistener/
 2. Check you're using a vision-capable model (Claude 3.5 Sonnet)
 3. Ensure `require_image` is set correctly in config
 
+### `ImportError: cannot import name 'HfFolder' from 'huggingface_hub'`
+
+`llamafirewall` depends on `huggingface_hub` but uses the `HfFolder` class that was
+removed in `huggingface_hub` v1.0. We pin `huggingface_hub<1.0` in `requirements.txt`
+as a workaround. Periodically check whether a newer `llamafirewall` release adds v1.0
+compatibility so the pin can be removed.
+
 ## Docker Deployment
 
 ### Using Docker Compose (Recommended)
