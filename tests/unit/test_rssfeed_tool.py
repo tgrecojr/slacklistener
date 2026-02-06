@@ -3,6 +3,7 @@
 import json
 import os
 import tempfile
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -323,6 +324,180 @@ class TestRSSFeedTool:
 
         assert len(clean) <= 500
         assert clean.endswith("...")
+
+
+class TestRSSFeedToolTTL:
+    """Tests for RSS Feed tool TTL-based expiry."""
+
+    @patch("src.tools.implementations.rssfeed.feedparser.parse")
+    def test_old_format_migration(self, mock_parse):
+        """Test that old format (list of IDs) is migrated to new format (dict with timestamps)."""
+        mock_feed = MagicMock()
+        mock_feed.bozo = False
+        mock_feed.feed.get.return_value = "Test Feed"
+        mock_feed.entries = [
+            MagicMock(
+                id="new-article",
+                title="New Article",
+                link="https://example.com/new",
+                summary="Fresh",
+                published_parsed=None,
+            )
+        ]
+        mock_parse.return_value = mock_feed
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            data_file = os.path.join(tmpdir, "seen.json")
+
+            # Write old format (list of IDs)
+            with open(data_file, "w") as f:
+                json.dump({"seen_ids": ["old-article-1", "old-article-2"]}, f)
+
+            tool = RSSFeedTool(
+                feed_urls=["https://example.com/feed.xml"],
+                data_file=data_file,
+            )
+
+            result = tool.execute({})
+
+            # Old articles should still be recognized as seen
+            assert "New Article" in result
+
+            # Verify file was migrated to new format
+            with open(data_file, "r") as f:
+                data = json.load(f)
+                # seen_ids should now be a dict with timestamps
+                assert isinstance(data["seen_ids"], dict)
+                assert "old-article-1" in data["seen_ids"]
+                assert "old-article-2" in data["seen_ids"]
+                assert "new-article" in data["seen_ids"]
+
+    @patch("src.tools.implementations.rssfeed.feedparser.parse")
+    def test_expired_articles_are_pruned(self, mock_parse):
+        """Test that articles older than 7 days are pruned and no longer filtered."""
+        mock_feed = MagicMock()
+        mock_feed.bozo = False
+        mock_feed.feed.get.return_value = "Test Feed"
+        mock_feed.entries = [
+            MagicMock(
+                id="expired-article",
+                title="Was Expired",
+                link="https://example.com/expired",
+                summary="Old content",
+                published_parsed=None,
+            ),
+            MagicMock(
+                id="recent-article",
+                title="Recent Article",
+                link="https://example.com/recent",
+                summary="Recent content",
+                published_parsed=None,
+            ),
+        ]
+        mock_parse.return_value = mock_feed
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            data_file = os.path.join(tmpdir, "seen.json")
+
+            # Write file with one expired and one recent article
+            expired_ts = (datetime.now() - timedelta(days=8)).isoformat()
+            recent_ts = (datetime.now() - timedelta(days=1)).isoformat()
+
+            with open(data_file, "w") as f:
+                json.dump(
+                    {
+                        "seen_ids": {
+                            "expired-article": expired_ts,
+                            "recent-article": recent_ts,
+                        },
+                        "last_updated": datetime.now().isoformat(),
+                    },
+                    f,
+                )
+
+            tool = RSSFeedTool(
+                feed_urls=["https://example.com/feed.xml"],
+                data_file=data_file,
+            )
+
+            result = tool.execute({})
+
+            # Expired article should appear as new (it was pruned)
+            assert "Was Expired" in result
+            # Recent article should NOT appear (still seen)
+            assert "Recent Article" not in result
+
+    @patch("src.tools.implementations.rssfeed.feedparser.parse")
+    def test_recent_articles_not_pruned(self, mock_parse):
+        """Test that articles within 7 days are preserved."""
+        mock_feed = MagicMock()
+        mock_feed.bozo = False
+        mock_feed.feed.get.return_value = "Test Feed"
+        mock_feed.entries = [
+            MagicMock(
+                id="recent-article",
+                title="Recent",
+                link="https://example.com/recent",
+                summary="Recent",
+                published_parsed=None,
+            )
+        ]
+        mock_parse.return_value = mock_feed
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            data_file = os.path.join(tmpdir, "seen.json")
+
+            recent_ts = (datetime.now() - timedelta(days=3)).isoformat()
+            with open(data_file, "w") as f:
+                json.dump(
+                    {"seen_ids": {"recent-article": recent_ts}},
+                    f,
+                )
+
+            tool = RSSFeedTool(
+                feed_urls=["https://example.com/feed.xml"],
+                data_file=data_file,
+            )
+
+            result = tool.execute({})
+
+            # Should be filtered (still within TTL)
+            assert "No new stories found" in result
+
+    @patch("src.tools.implementations.rssfeed.feedparser.parse")
+    def test_new_format_saved_with_timestamps(self, mock_parse):
+        """Test that newly seen articles are saved with timestamps."""
+        mock_feed = MagicMock()
+        mock_feed.bozo = False
+        mock_feed.feed.get.return_value = "Test Feed"
+        mock_feed.entries = [
+            MagicMock(
+                id="article-1",
+                title="Article 1",
+                link="https://example.com/1",
+                summary="Summary",
+                published_parsed=None,
+            )
+        ]
+        mock_parse.return_value = mock_feed
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            data_file = os.path.join(tmpdir, "seen.json")
+
+            tool = RSSFeedTool(
+                feed_urls=["https://example.com/feed.xml"],
+                data_file=data_file,
+            )
+
+            tool.execute({})
+
+            with open(data_file, "r") as f:
+                data = json.load(f)
+                assert isinstance(data["seen_ids"], dict)
+                assert "article-1" in data["seen_ids"]
+                # Value should be an ISO timestamp string
+                ts = datetime.fromisoformat(data["seen_ids"]["article-1"])
+                assert (datetime.now() - ts).total_seconds() < 60
 
 
 class TestRSSFeedToolFactory:

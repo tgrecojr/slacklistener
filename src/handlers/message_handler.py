@@ -41,6 +41,7 @@ class MessageHandler:
         self.config = config
         self.bot_user_id = bot_user_id
         self.bot_token = bot_token
+        self._client_cache: Dict[tuple, Any] = {}
 
     def handle_message(self, event: dict, say, client) -> None:
         """
@@ -141,6 +142,27 @@ class MessageHandler:
                 return channel
         return None
 
+    def _get_client(self, channel_config: ChannelConfig) -> OpenRouterClient:
+        """Get or create a cached OpenRouter client for the given config."""
+        cache_key = (
+            channel_config.llm.api_key,
+            channel_config.llm.model,
+            channel_config.llm.base_url,
+            channel_config.llm.site_url,
+            channel_config.llm.site_name,
+            self.config.settings.llm_timeout,
+        )
+        if cache_key not in self._client_cache:
+            self._client_cache[cache_key] = OpenRouterClient(
+                api_key=channel_config.llm.api_key,
+                model=channel_config.llm.model,
+                base_url=channel_config.llm.base_url,
+                site_url=channel_config.llm.site_url,
+                site_name=channel_config.llm.site_name,
+                timeout=self.config.settings.llm_timeout,
+            )
+        return self._client_cache[cache_key]
+
     def _format_message(
         self, text: str, images: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
@@ -205,14 +227,8 @@ class MessageHandler:
             Response text or None on error
         """
         try:
-            # Create OpenRouter client from config
-            client = OpenRouterClient(
-                api_key=channel_config.llm.api_key,
-                model=channel_config.llm.model,
-                base_url=channel_config.llm.base_url,
-                site_url=channel_config.llm.site_url,
-                site_name=channel_config.llm.site_name,
-            )
+            # Get or create OpenRouter client from config
+            client = self._get_client(channel_config)
 
             # Format message
             message = self._format_message(text, images)

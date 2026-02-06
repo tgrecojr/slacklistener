@@ -237,6 +237,96 @@ class TestMessageHandler:
         say.assert_not_called()
 
     @patch("src.handlers.message_handler.OpenRouterClient")
+    def test_generate_response_passes_timeout(
+        self, mock_client_class, message_handler, sample_slack_message_event
+    ):
+        """Test that timeout from settings is passed to OpenRouterClient."""
+        mock_client = Mock()
+        mock_client.generate_response.return_value = "test response"
+        mock_client_class.return_value = mock_client
+
+        say = Mock()
+        client = Mock()
+        client.reactions_add = Mock()
+
+        message_handler.handle_message(sample_slack_message_event, say, client)
+
+        # Verify timeout was passed to OpenRouterClient constructor
+        mock_client_class.assert_called_once()
+        call_kwargs = mock_client_class.call_args.kwargs
+        assert call_kwargs["timeout"] == message_handler.config.settings.llm_timeout
+
+    @patch("src.handlers.message_handler.OpenRouterClient")
+    def test_client_is_cached_across_messages(
+        self, mock_client_class, message_handler, sample_slack_message_event
+    ):
+        """Test that the same OpenRouterClient is reused for the same channel config."""
+        mock_client = Mock()
+        mock_client.generate_response.return_value = "response"
+        mock_client_class.return_value = mock_client
+
+        say = Mock()
+        client = Mock()
+        client.reactions_add = Mock()
+
+        # Send two messages to the same channel
+        message_handler.handle_message(sample_slack_message_event, say, client)
+        message_handler.handle_message(sample_slack_message_event, say, client)
+
+        # Client should only be created once
+        assert mock_client_class.call_count == 1
+
+    @patch("src.handlers.message_handler.OpenRouterClient")
+    def test_different_configs_get_different_clients(
+        self, mock_client_class, message_handler
+    ):
+        """Test that different channel LLM configs get separate clients."""
+        mock_client = Mock()
+        mock_client.generate_response.return_value = "response"
+        mock_client_class.return_value = mock_client
+
+        from src.utils.config import ChannelConfig, LLMConfig, ResponseConfig
+
+        # Add a second channel with different LLM config
+        channel2 = ChannelConfig(
+            channel_id="C99999",
+            channel_name="other-channel",
+            enabled=True,
+            keywords=[],
+            llm=LLMConfig(api_key="different-key", model="openai/gpt-4o"),
+            system_prompt="Different prompt",
+            response=ResponseConfig(),
+        )
+        message_handler.config.channels.append(channel2)
+
+        say = Mock()
+        client = Mock()
+        client.reactions_add = Mock()
+
+        # Send message to first channel
+        event1 = {
+            "type": "message",
+            "user": "U67890",
+            "text": "help",
+            "channel": "C12345",
+            "ts": "123",
+        }
+        message_handler.handle_message(event1, say, client)
+
+        # Send message to second channel
+        event2 = {
+            "type": "message",
+            "user": "U67890",
+            "text": "hello",
+            "channel": "C99999",
+            "ts": "456",
+        }
+        message_handler.handle_message(event2, say, client)
+
+        # Should have created two different clients
+        assert mock_client_class.call_count == 2
+
+    @patch("src.handlers.message_handler.OpenRouterClient")
     def test_generate_response_error_handling(self, mock_client_class, message_handler):
         """Test error handling in response generation."""
         # Make client raise exception (error case)

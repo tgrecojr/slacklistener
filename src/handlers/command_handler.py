@@ -31,6 +31,7 @@ class CommandHandler:
         """
         self.app = app
         self.config = config
+        self._client_cache: dict[tuple, any] = {}
 
     def handle_command(self, ack, command: dict, say) -> None:
         """
@@ -95,6 +96,27 @@ class CommandHandler:
                 return cmd_config
         return None
 
+    def _get_client(self, command_config: SlashCommandConfig) -> OpenRouterClient:
+        """Get or create a cached OpenRouter client for the given config."""
+        cache_key = (
+            command_config.llm.api_key,
+            command_config.llm.model,
+            command_config.llm.base_url,
+            command_config.llm.site_url,
+            command_config.llm.site_name,
+            self.config.settings.llm_timeout,
+        )
+        if cache_key not in self._client_cache:
+            self._client_cache[cache_key] = OpenRouterClient(
+                api_key=command_config.llm.api_key,
+                model=command_config.llm.model,
+                base_url=command_config.llm.base_url,
+                site_url=command_config.llm.site_url,
+                site_name=command_config.llm.site_name,
+                timeout=self.config.settings.llm_timeout,
+            )
+        return self._client_cache[cache_key]
+
     def _generate_response(
         self,
         text: str,
@@ -151,14 +173,8 @@ class CommandHandler:
                     f"Enriched system prompt with {len(tool_results)} tool result(s)"
                 )
 
-            # Create OpenRouter client from config
-            client = OpenRouterClient(
-                api_key=command_config.llm.api_key,
-                model=command_config.llm.model,
-                base_url=command_config.llm.base_url,
-                site_url=command_config.llm.site_url,
-                site_name=command_config.llm.site_name,
-            )
+            # Get or create OpenRouter client from config
+            client = self._get_client(command_config)
 
             # Create simple text message
             message = {"role": "user", "content": [{"type": "text", "text": text}]}
