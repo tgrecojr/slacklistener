@@ -13,6 +13,16 @@ def command_handler(mock_slack_app, sample_app_config):
     return CommandHandler(app=mock_slack_app, config=sample_app_config)
 
 
+@pytest.fixture
+def command_handler_with_guard(mock_slack_app, sample_app_config):
+    """Create a command handler with an input guard."""
+    mock_guard = Mock()
+    mock_guard.scan.return_value = (True, 0.05)
+    return CommandHandler(
+        app=mock_slack_app, config=sample_app_config, input_guard=mock_guard
+    )
+
+
 class TestCommandHandler:
     """Tests for CommandHandler class."""
 
@@ -236,3 +246,68 @@ class TestCommandHandler:
         assert call_kwargs["max_tokens"] == sample_command_config.llm.max_tokens
         assert call_kwargs["temperature"] == sample_command_config.llm.temperature
         assert call_kwargs["system_prompt"] == sample_command_config.system_prompt
+
+    @patch("src.handlers.command_handler.OpenRouterClient")
+    def test_input_guard_allows_safe_command(
+        self, mock_client_class, command_handler_with_guard, sample_slack_command
+    ):
+        """Test that handler calls input_guard.scan() and proceeds when safe."""
+        mock_client = Mock()
+        mock_client.generate_response.return_value = "test response"
+        mock_client_class.return_value = mock_client
+
+        ack = Mock()
+        say = Mock()
+
+        command_handler_with_guard.handle_command(ack, sample_slack_command, say)
+
+        # Guard should have been called with the command text
+        command_handler_with_guard.input_guard.scan.assert_called_once_with(
+            "What is AI?"
+        )
+
+        # Should send response (command was safe)
+        say.assert_called_once()
+        assert "test response" in say.call_args.args[0]
+
+    def test_input_guard_blocks_injection(
+        self, command_handler_with_guard, sample_slack_command
+    ):
+        """Test that detected injection sends generic error via say()."""
+        # Configure guard to detect injection
+        command_handler_with_guard.input_guard.scan.return_value = (False, 0.98)
+
+        ack = Mock()
+        say = Mock()
+
+        command_handler_with_guard.handle_command(ack, sample_slack_command, say)
+
+        # Should acknowledge
+        ack.assert_called_once()
+
+        # Guard should have been called
+        command_handler_with_guard.input_guard.scan.assert_called_once()
+
+        # Should send generic error message
+        say.assert_called_once()
+        response_text = say.call_args.args[0]
+        assert "could not be processed" in response_text.lower()
+
+    @patch("src.handlers.command_handler.OpenRouterClient")
+    def test_no_guard_skips_scan(
+        self, mock_client_class, command_handler, sample_slack_command
+    ):
+        """Test that handler works normally when input_guard is None."""
+        mock_client = Mock()
+        mock_client.generate_response.return_value = "test response"
+        mock_client_class.return_value = mock_client
+
+        ack = Mock()
+        say = Mock()
+
+        # command_handler has no input_guard (None)
+        assert command_handler.input_guard is None
+        command_handler.handle_command(ack, sample_slack_command, say)
+
+        # Should still send response
+        say.assert_called_once()
