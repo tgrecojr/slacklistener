@@ -18,5 +18,5 @@ feedparser>=6.0.11
 
 # Prompt Injection Detection (Meta LlamaFirewall)
 # Pin huggingface_hub<1.0 until llamafirewall supports v1.0 (HfFolder removed)
-huggingface_hub<1.0
+huggingface_hub<1.5
 llamafirewall>=1.0.3
