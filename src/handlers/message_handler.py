@@ -8,7 +8,6 @@ from slack_bolt import App
 
 from ..llm import OpenRouterClient
 from ..utils.config import AppConfig, ChannelConfig
-from ..utils.input_guard import InputGuard
 from ..utils.slack_helpers import (
     matches_keywords,
     extract_message_images,
@@ -28,7 +27,6 @@ class MessageHandler:
         config: AppConfig,
         bot_user_id: str,
         bot_token: str,
-        input_guard: Optional[InputGuard] = None,
     ):
         """
         Initialize message handler.
@@ -38,13 +36,11 @@ class MessageHandler:
             config: Application configuration
             bot_user_id: Bot's user ID
             bot_token: Bot token for file downloads
-            input_guard: Optional prompt injection scanner
         """
         self.app = app
         self.config = config
         self.bot_user_id = bot_user_id
         self.bot_token = bot_token
-        self.input_guard = input_guard
         self._client_cache: Dict[tuple, Any] = {}
 
     def handle_message(self, event: dict, say, client) -> None:
@@ -105,17 +101,6 @@ class MessageHandler:
                     f"No keyword match in channel {channel_config.channel_name}"
                 )
                 return
-
-            # Check for prompt injection
-            if self.input_guard:
-                is_safe, risk_score = self.input_guard.scan(text)
-                if not is_safe:
-                    logger.warning(
-                        "Blocked message in %s (injection score=%.3f)",
-                        channel_config.channel_name,
-                        risk_score,
-                    )
-                    return  # Silently drop — don't reveal detection to attacker
 
             # Add reaction if configured
             if channel_config.response.add_reaction:

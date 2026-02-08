@@ -18,20 +18,6 @@ def message_handler(mock_slack_app, sample_app_config):
     )
 
 
-@pytest.fixture
-def message_handler_with_guard(mock_slack_app, sample_app_config):
-    """Create a message handler with an input guard."""
-    mock_guard = Mock()
-    mock_guard.scan.return_value = (True, 0.05)
-    return MessageHandler(
-        app=mock_slack_app,
-        config=sample_app_config,
-        bot_user_id="U12345",
-        bot_token="xoxb-test-token",
-        input_guard=mock_guard,
-    )
-
-
 class TestMessageHandler:
     """Tests for MessageHandler class."""
 
@@ -364,71 +350,3 @@ class TestMessageHandler:
 
         # Should not send response on error
         say.assert_not_called()
-
-    @patch("src.handlers.message_handler.OpenRouterClient")
-    def test_input_guard_allows_safe_message(
-        self, mock_client_class, message_handler_with_guard, sample_slack_message_event
-    ):
-        """Test that handler calls input_guard.scan() and proceeds when safe."""
-        mock_client = Mock()
-        mock_client.generate_response.return_value = "test response"
-        mock_client_class.return_value = mock_client
-
-        say = Mock()
-        client = Mock()
-        client.reactions_add = Mock()
-
-        message_handler_with_guard.handle_message(
-            sample_slack_message_event, say, client
-        )
-
-        # Guard should have been called
-        message_handler_with_guard.input_guard.scan.assert_called_once_with(
-            "I need help with an issue"
-        )
-
-        # Should send response (message was safe)
-        say.assert_called_once()
-
-    def test_input_guard_blocks_injection(
-        self, message_handler_with_guard, sample_slack_message_event
-    ):
-        """Test that detected injection causes message to be silently dropped."""
-        # Configure guard to detect injection
-        message_handler_with_guard.input_guard.scan.return_value = (False, 0.98)
-
-        say = Mock()
-        client = Mock()
-        client.reactions_add = Mock()
-
-        message_handler_with_guard.handle_message(
-            sample_slack_message_event, say, client
-        )
-
-        # Guard should have been called
-        message_handler_with_guard.input_guard.scan.assert_called_once()
-
-        # Should NOT send response (injection detected, silently dropped)
-        say.assert_not_called()
-        # Should NOT add reaction either
-        client.reactions_add.assert_not_called()
-
-    @patch("src.handlers.message_handler.OpenRouterClient")
-    def test_no_guard_skips_scan(
-        self, mock_client_class, message_handler, sample_slack_message_event
-    ):
-        """Test that handler works normally when input_guard is None."""
-        mock_client = Mock()
-        mock_client.generate_response.return_value = "test response"
-        mock_client_class.return_value = mock_client
-
-        say = Mock()
-        client = Mock()
-        client.reactions_add = Mock()
-
-        # message_handler has no input_guard (None)
-        assert message_handler.input_guard is None
-        message_handler.handle_message(sample_slack_message_event, say, client)
-
-        # Should still send response
-        say.assert_called_once()

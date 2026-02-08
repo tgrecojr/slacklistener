@@ -9,7 +9,6 @@ from slack_bolt import App
 from ..llm import OpenRouterClient
 from ..tools.factory import create_tool
 from ..utils.config import AppConfig, SlashCommandConfig
-from ..utils.input_guard import InputGuard
 from ..utils.slack_helpers import format_slack_text
 
 logger = logging.getLogger(__name__)
@@ -22,7 +21,6 @@ class CommandHandler:
         self,
         app: App,
         config: AppConfig,
-        input_guard: Optional[InputGuard] = None,
     ):
         """
         Initialize command handler.
@@ -30,11 +28,9 @@ class CommandHandler:
         Args:
             app: Slack Bolt app
             config: Application configuration
-            input_guard: Optional prompt injection scanner
         """
         self.app = app
         self.config = config
-        self.input_guard = input_guard
         self._client_cache: dict[tuple, any] = {}
 
     def handle_command(self, ack, command: dict, say) -> None:
@@ -75,18 +71,6 @@ class CommandHandler:
                     f"Maximum is {self.config.settings.max_message_length} characters."
                 )
                 return
-
-            # Check for prompt injection
-            if self.input_guard:
-                is_safe, risk_score = self.input_guard.scan(user_text)
-                if not is_safe:
-                    logger.warning(
-                        "Blocked command %s (injection score=%.3f)",
-                        command_text,
-                        risk_score,
-                    )
-                    say("Sorry, your message could not be processed.")
-                    return
 
             logger.info(f"Processing command: {command_text}")
 

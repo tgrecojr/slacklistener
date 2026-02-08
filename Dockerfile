@@ -1,11 +1,10 @@
 # Build stage - compile dependencies
-FROM python:3.14-slim@sha256:486b8092bfb12997e10d4920897213a06563449c951c5506c2a2cfaf591c599f AS builder
+FROM python:3.14-slim@sha256:fa0acdcd760f0bf265bc2c1ee6120776c4d92a9c3a37289e17b9642ad2e5b83b AS builder
 
 # Install build dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
-    libc6-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create virtual environment
@@ -18,7 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 
 # Final stage - runtime only
-FROM python:3.14-slim@sha256:486b8092bfb12997e10d4920897213a06563449c951c5506c2a2cfaf591c599f
+FROM python:3.14-slim@sha256:fa0acdcd760f0bf265bc2c1ee6120776c4d92a9c3a37289e17b9642ad2e5b83b
 
 # Set working directory
 WORKDIR /app
