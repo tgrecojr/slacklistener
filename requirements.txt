@@ -15,8 +15,3 @@ requests>=2.32.0
 
 # RSS Feed Parsing
 feedparser>=6.0.11
-
-# Prompt Injection Detection (Meta LlamaFirewall)
-# Pin huggingface_hub<1.0 until llamafirewall supports v1.0 (HfFolder removed)
-huggingface_hub<1.0
-llamafirewall>=1.0.3

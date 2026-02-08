@@ -7,7 +7,6 @@
 # Get your OpenRouter API key at: https://openrouter.ai/keys
 # Set API keys in .env file and reference them with ${VARIABLE_NAME}
 
-
 # Channel configurations
 channels:
   # Example 1: Using Claude 3.5 Sonnet via OpenRouter
@@ -285,7 +284,3 @@ settings:
 
   # Whether to process messages from the app itself
   ignore_self: true
-
-  # Prompt injection scanning
-  prompt_guard_enabled: true           # Enable prompt injection scanning
-  prompt_injection_threshold: 0.9      # 0-1, higher = stricter (default 0.9)

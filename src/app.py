@@ -12,7 +12,6 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 from .handlers.message_handler import MessageHandler
 from .handlers.command_handler import CommandHandler
 from .utils.config import load_config
-from .utils.input_guard import InputGuard
 
 # Load environment variables
 load_dotenv()
@@ -70,27 +69,17 @@ def main() -> None:
         logger.error(f"Error getting bot user ID: {e}")
         sys.exit(1)
 
-    # Initialize prompt injection guard
-    input_guard = None
-    if config.settings.prompt_guard_enabled:
-        logger.info("Initializing prompt injection guard...")
-        input_guard = InputGuard(
-            threshold=config.settings.prompt_injection_threshold,
-        )
-
     # Initialize handlers
     message_handler = MessageHandler(
         app=app,
         config=config,
         bot_user_id=bot_user_id,
         bot_token=slack_bot_token,
-        input_guard=input_guard,
     )
 
     command_handler = CommandHandler(
         app=app,
         config=config,
-        input_guard=input_guard,
     )
 
     # Register message event listener

@@ -18,14 +18,9 @@ jobs:
       id-token: write
     
     steps:
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
-          sudo docker image prune --all --force
-
       - name: Checkout repository
         uses: actions/checkout@v6
-
+      
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       
@@ -57,4 +52,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to: type=gha,mode=min
+          cache-to: type=gha,mode=max
