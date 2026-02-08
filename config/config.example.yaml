@@ -7,6 +7,7 @@
 # Get your OpenRouter API key at: https://openrouter.ai/keys
 # Set API keys in .env file and reference them with ${VARIABLE_NAME}
 
+
 # Channel configurations
 channels:
   # Example 1: Using Claude 3.5 Sonnet via OpenRouter
