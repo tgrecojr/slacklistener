@@ -1,5 +1,5 @@
 # Build stage - compile dependencies
-FROM python:3.14-slim@sha256:fa0acdcd760f0bf265bc2c1ee6120776c4d92a9c3a37289e17b9642ad2e5b83b AS builder
+FROM python:3.14-slim@sha256:9006fc63e3eaedc00ebc81193c99528575a2f9b9e3fb36d95e94814c23f31f47 AS builder
 
 # Install build dependencies
 RUN apt-get update && \
@@ -17,7 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 
 # Final stage - runtime only
-FROM python:3.14-slim@sha256:fa0acdcd760f0bf265bc2c1ee6120776c4d92a9c3a37289e17b9642ad2e5b83b
+FROM python:3.14-slim@sha256:9006fc63e3eaedc00ebc81193c99528575a2f9b9e3fb36d95e94814c23f31f47
 
 # Set working directory
 WORKDIR /app
