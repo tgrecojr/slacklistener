@@ -72,5 +72,13 @@ def create_tool(tool_config: Dict[str, Any]) -> Tool:
             max_stories=tool_config.get("max_stories", 10),
         )
 
+    elif tool_type == "f1":
+        from .implementations.f1 import F1Tool
+
+        return F1Tool(
+            base_url=tool_config.get("base_url", F1Tool.DEFAULT_BASE_URL),
+            request_timeout=tool_config.get("request_timeout", 10),
+        )
+
     else:
         raise ValueError(f"Unknown tool type: {tool_type}")

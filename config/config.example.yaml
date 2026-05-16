@@ -268,6 +268,33 @@ slash_commands:
         data_file: "data/news_seen_articles.json"
         max_stories: 10
 
+  # Example: /F1 command for Formula 1 standings and race info
+  - command: "/F1"
+    description: "Current F1 standings, last race podium, and next race details"
+    enabled: true
+
+    llm:
+      api_key: "${OPENROUTER_API_KEY}"
+      model: "anthropic/claude-3.5-sonnet"
+      max_tokens: 1500
+      temperature: 0.5
+
+    system_prompt: |
+      You are a Formula 1 reporter. Using the F1 data provided, produce a concise
+      briefing that includes:
+      - Top of the current drivers' championship (top 5)
+      - Top of the constructors' championship (top 5)
+      - The podium from the last race
+      - The next race: name, circuit, date, and key session times
+      If qualifying or sprint results are present, summarize the top performers and
+      note that the weekend is in progress. Use bullet points and keep it under 250 words.
+
+    tools:
+      - type: "f1"
+        # Both fields are optional; defaults shown below
+        # base_url: "https://f1api.dev/api"
+        # request_timeout: 10
+
 # Global settings
 settings:
   # Log level: DEBUG, INFO, WARNING, ERROR
