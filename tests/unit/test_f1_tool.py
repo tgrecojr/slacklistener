@@ -423,6 +423,111 @@ class TestF1ToolRaceWeekend:
         assert "QUALIFYING" in result
 
 
+class TestF1ToolLiveApiShapes:
+    """Regression tests for actual f1api.dev response shapes."""
+
+    @responses.activate
+    def test_next_race_payload_with_race_as_single_element_list(self):
+        """The live API returns `race` as a one-element list, not a dict.
+
+        Previously crashed with: AttributeError: 'list' object has no attribute 'get'
+        """
+        _register_core_endpoints()
+
+        # Real-world shape: `race` is a list containing one object.
+        next_race_as_list = {
+            "season": 2026,
+            "round": 7,
+            "race": [
+                {
+                    "raceId": "canadian_2026",
+                    "raceName": "Formula 1 Lenovo Grand Prix Du Canada 2026",
+                    "round": 7,
+                    "schedule": {
+                        "race": {"date": "2026-05-24", "time": "18:00:00Z"},
+                        "qualy": {"date": "2026-05-23", "time": "20:00:00Z"},
+                        "fp1": {"date": "2026-05-22", "time": "17:30:00Z"},
+                        "fp2": {"date": None, "time": None},
+                        "fp3": {"date": None, "time": None},
+                        "sprintQualy": {"date": "2026-05-22", "time": "21:00:00Z"},
+                        "sprintRace": {"date": "2026-05-23", "time": "16:30:00Z"},
+                    },
+                    "circuit": {
+                        "circuitName": "Circuit Gilles Villeneuve",
+                        "country": "Canada",
+                        "city": "Montreal",
+                    },
+                }
+            ],
+        }
+        responses.add(
+            responses.GET,
+            f"{F1_BASE}/current/next",
+            json=next_race_as_list,
+            status=200,
+        )
+
+        # Tuesday before the weekend — should NOT trip race-weekend logic
+        tool = F1Tool(today=date(2026, 5, 19))
+        result = tool.execute({"user_input": "F1"})
+
+        assert "NEXT RACE" in result
+        assert "Canadian" in result or "Canada" in result
+        assert "Round 7" in result
+        assert "Montreal" in result
+        assert "2026-05-24" in result
+        # Sprint date is set in schedule, but we're outside the weekend window
+        # so the qualy/sprint endpoints shouldn't be called.
+        assert "QUALIFYING" not in result
+        assert "SPRINT RESULTS" not in result
+
+    @responses.activate
+    def test_race_as_list_during_sprint_weekend(self):
+        """`race` as a list AND we are inside the Fri-Sun window of a sprint weekend."""
+        _register_core_endpoints()
+        next_race_as_list = {
+            "season": 2026,
+            "round": 7,
+            "race": [
+                {
+                    "raceName": "Canadian Grand Prix",
+                    "round": 7,
+                    "schedule": {
+                        "race": {"date": "2026-05-24", "time": "18:00:00Z"},
+                        "qualy": {"date": "2026-05-23", "time": "20:00:00Z"},
+                        "sprintQualy": {"date": "2026-05-22", "time": "21:00:00Z"},
+                        "sprintRace": {"date": "2026-05-23", "time": "16:30:00Z"},
+                    },
+                    "circuit": {"circuitName": "Circuit Gilles Villeneuve"},
+                }
+            ],
+        }
+        responses.add(
+            responses.GET,
+            f"{F1_BASE}/current/next",
+            json=next_race_as_list,
+            status=200,
+        )
+        responses.add(
+            responses.GET,
+            f"{F1_BASE}/current/last/qualy",
+            json=LAST_QUALY,
+            status=200,
+        )
+        responses.add(
+            responses.GET,
+            f"{F1_BASE}/current/last/sprint",
+            json=LAST_SPRINT,
+            status=200,
+        )
+
+        # Saturday of the Canadian sprint weekend
+        tool = F1Tool(today=date(2026, 5, 23))
+        result = tool.execute({"user_input": "F1"})
+        assert "QUALIFYING" in result
+        assert "SPRINT" in result
+
+
 class TestF1ToolErrorHandling:
     """Failure modes of the F1 tool."""
 
