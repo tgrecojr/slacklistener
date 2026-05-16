@@ -1,37 +1,24 @@
 #!/bin/bash
-# Setup script for Slack Listener application
+# Setup script for Slack Listener application (uv-based)
 
 set -e
 
 echo "=== Slack Listener Setup ==="
 echo ""
 
-# Check Python version
-echo "Checking Python version..."
-python_version=$(python3 --version 2>&1 | awk '{print $2}')
-echo "Found Python $python_version"
-
-# Create virtual environment
-if [ ! -d "venv" ]; then
-    echo ""
-    echo "Creating virtual environment..."
-    python3 -m venv venv
-    echo "✓ Virtual environment created"
-else
-    echo ""
-    echo "Virtual environment already exists"
+# Check uv is installed
+if ! command -v uv >/dev/null 2>&1; then
+    echo "❌ uv is not installed."
+    echo "   Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    echo "   or: brew install uv"
+    exit 1
 fi
+echo "Found uv: $(uv --version)"
 
-# Activate virtual environment
+# Create / update virtual environment and sync dependencies from uv.lock
 echo ""
-echo "Activating virtual environment..."
-source venv/bin/activate
-
-# Install dependencies
-echo ""
-echo "Installing dependencies..."
-pip install --upgrade pip
-pip install -r requirements.txt
+echo "Syncing dependencies (this creates .venv/ if needed)..."
+uv sync --frozen
 echo "✓ Dependencies installed"
 
 # Create .env file if it doesn't exist
@@ -66,9 +53,7 @@ echo "=== Setup Complete! ==="
 echo ""
 echo "Next steps:"
 echo "1. Edit .env and add your SLACK_BOT_TOKEN and SLACK_APP_TOKEN"
-echo "2. Configure AWS credentials (via ~/.aws/credentials or env vars)"
-echo "3. Edit config/config.yaml to set up your channels and commands"
-echo "4. Run the application:"
-echo "   source venv/bin/activate"
-echo "   python run.py"
+echo "2. Edit config/config.yaml to set up your channels and commands"
+echo "3. Run the application:"
+echo "   uv run python run.py"
 echo ""

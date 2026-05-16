@@ -1,0 +1,46 @@
+# Git
+.git/
+.gitignore
+.github/
+
+# Virtualenvs and Python caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.so
+.python-version
+
+# Tests and coverage artifacts
+tests/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Local config / env / data
+.env
+.env.*
+!.env.example
+config/config.yaml
+data/*.json
+
+# Docs and ancillary
+docs/
+*.md
+!README.md
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+.serena/
+CLAUDE.local.md
+
+# ggshield
+.cache_ggshield

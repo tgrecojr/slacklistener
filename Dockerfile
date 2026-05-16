@@ -1,30 +1,40 @@
-# Build stage - compile dependencies
+# syntax=docker/dockerfile:1.7
+
+# Build stage - resolve and install dependencies with uv
 FROM python:3.14-slim@sha256:7a500125bc50693f2214e842a621440a1b1b9cbb2188f74ab045d29ed2ea5856 AS builder
 
-# Install build dependencies
+# Pull the uv binary from the official distroless image
+COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /uvx /usr/local/bin/
+
+# Install build toolchain for any deps that ship sdists requiring C extensions
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+        gcc \
+        libc6-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-# Create virtual environment
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+WORKDIR /app
 
-# Copy and install requirements
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# uv settings: install into /app/.venv, copy (not symlink) for portability between stages
+ENV UV_PROJECT_ENVIRONMENT=/app/.venv \
+    UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=never
+
+# Install only production deps first (no project), cached by lockfile contents
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
 
 # Final stage - runtime only
 FROM python:3.14-slim@sha256:7a500125bc50693f2214e842a621440a1b1b9cbb2188f74ab045d29ed2ea5856
 
-# Set working directory
 WORKDIR /app
 
-# Copy Python virtual environment from builder
-COPY --from=builder /opt/venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+# Copy the resolved virtualenv from the builder
+COPY --from=builder /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy application code
 COPY src/ ./src/
@@ -38,9 +48,7 @@ RUN useradd -m -u 1000 slackbot && \
     chown -R slackbot:slackbot /app
 USER slackbot
 
-# Health check (optional)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import sys; sys.exit(0)"
 
-# Run the application
 CMD ["python", "run.py"]
