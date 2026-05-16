@@ -106,6 +106,23 @@ tools:
 - Content monitoring
 - Feed aggregation
 
+#### F1 Tool
+
+Fetches current-season Formula 1 data from the public [f1api.dev](https://f1api.dev) API: driver and constructor standings, the last race's podium, and the next race's schedule. When today falls within the Friday–Sunday window of the next race, it also pulls qualifying results, and pulls sprint results on sprint weekends.
+
+**Configuration:**
+```yaml
+tools:
+  - type: "f1"
+    # Both fields optional; defaults shown
+    # base_url: "https://f1api.dev/api"
+    # request_timeout: 10
+```
+
+**Use Cases:**
+- F1 race-weekend briefings (`/F1` command)
+- Standings updates between race weekends
+
 **Example Integration:**
 ```yaml
 slash_commands:
@@ -260,7 +277,7 @@ The application uses [OpenRouter](https://openrouter.ai) as a unified gateway to
 
 5. **Create Slash Commands** (optional):
    - Go to "Slash Commands"
-   - Create commands matching your `config.yaml` (e.g., `/analyze`, `/summarize`, `/news`)
+   - Create commands matching your `config.yaml` (e.g., `/analyze`, `/summarize`, `/news`, `/F1`)
 
 6. **Install App to Workspace**:
    - Go to "Install App"
@@ -381,7 +398,8 @@ slacklistener/
 │   │   ├── factory.py           # Tool factory
 │   │   └── implementations/
 │   │       ├── openweathermap.py    # OpenWeatherMap tool
-│   │       └── rssfeed.py           # RSS Feed tool
+│   │       ├── rssfeed.py           # RSS Feed tool
+│   │       └── f1.py                # F1 (f1api.dev) tool
 │   ├── utils/
 │   │   ├── config.py            # Configuration loading
 │   │   └── slack_helpers.py     # Slack utilities
