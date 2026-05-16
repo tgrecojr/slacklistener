@@ -90,8 +90,19 @@ class F1Tool(Tool):
         weekend_start = race_date - timedelta(days=2)
         return weekend_start <= today <= race_date
 
+    def _next_race_object(
+        self, next_race_payload: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Return the next-race object, tolerating both dict and single-element list shapes."""
+        race = (next_race_payload or {}).get("race")
+        if isinstance(race, list):
+            return race[0] if race else {}
+        if isinstance(race, dict):
+            return race
+        return {}
+
     def _is_sprint_weekend(self, next_race_payload: Optional[Dict[str, Any]]) -> bool:
-        race = (next_race_payload or {}).get("race") or {}
+        race = self._next_race_object(next_race_payload)
         schedule = race.get("schedule") or {}
         sprint_race = schedule.get("sprintRace") or {}
         return bool(sprint_race.get("date"))
@@ -99,7 +110,7 @@ class F1Tool(Tool):
     def _extract_next_race_date(
         self, next_race_payload: Optional[Dict[str, Any]]
     ) -> Optional[date]:
-        race = (next_race_payload or {}).get("race") or {}
+        race = self._next_race_object(next_race_payload)
         schedule = race.get("schedule") or {}
         race_block = schedule.get("race") or {}
         date_str = race_block.get("date")
@@ -181,7 +192,7 @@ class F1Tool(Tool):
         header = "NEXT RACE:"
         if not payload:
             return f"{header}\n- unavailable"
-        race = payload.get("race") or {}
+        race = self._next_race_object(payload)
         if not race:
             return f"{header}\n- unavailable"
 
