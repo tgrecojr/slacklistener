@@ -8,10 +8,8 @@ Get your Slack Listener up and running in 5 minutes!
 # Run the setup script
 bash setup.sh
 
-# Or manually:
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+# Or manually (requires uv: https://docs.astral.sh/uv/):
+uv sync --frozen
 cp .env.example .env
 cp config/config.example.yaml config/config.yaml
 ```
@@ -104,11 +102,8 @@ channels:
 ## 6. Run the Bot
 
 ```bash
-# Activate virtual environment
-source venv/bin/activate
-
 # Run the bot
-python run.py
+uv run python run.py
 
 # Or using make
 make run
@@ -182,7 +177,7 @@ The application logs to stdout (console).
 
 To save logs to a file:
 ```bash
-python run.py 2>&1 | tee app.log
+uv run python run.py 2>&1 | tee app.log
 ```
 
 With Docker:

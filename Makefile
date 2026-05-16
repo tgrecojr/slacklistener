@@ -1,48 +1,51 @@
-.PHONY: help setup install install-dev run clean test test-unit test-integration test-cov lint format
+.PHONY: help setup install install-dev lock run clean test test-unit test-integration test-cov lint format
 
 help:
 	@echo "Slack Listener - Available commands:"
-	@echo "  make setup          - Run initial setup (create venv, install deps, create config)"
-	@echo "  make install        - Install/update dependencies"
-	@echo "  make install-dev    - Install development dependencies"
-	@echo "  make run            - Run the application"
-	@echo "  make test           - Run all tests"
-	@echo "  make test-unit      - Run unit tests only"
+	@echo "  make setup            - Run initial setup (create venv, install deps, create config)"
+	@echo "  make install          - Install/update runtime dependencies (uv sync --no-dev)"
+	@echo "  make install-dev      - Install runtime + dev dependencies (uv sync)"
+	@echo "  make lock             - Refresh uv.lock from pyproject.toml"
+	@echo "  make run              - Run the application"
+	@echo "  make test             - Run all tests"
+	@echo "  make test-unit        - Run unit tests only"
 	@echo "  make test-integration - Run integration tests only"
-	@echo "  make test-cov       - Run tests with coverage report"
-	@echo "  make clean          - Clean up generated files"
-	@echo "  make lint           - Run code linting"
-	@echo "  make format         - Format code with black"
+	@echo "  make test-cov         - Run tests with coverage report"
+	@echo "  make clean            - Clean up generated files"
+	@echo "  make lint             - Run code linting"
+	@echo "  make format           - Format code with black"
 
 setup:
 	@bash setup.sh
 
 install:
-	@pip install -r requirements.txt
+	@uv sync --frozen --no-dev
 
 install-dev:
-	@pip install -r requirements.txt
-	@pip install -r requirements-dev.txt
+	@uv sync --frozen
 	@echo "✓ Development dependencies installed"
 
+lock:
+	@uv lock
+
 run:
-	@python run.py
+	@uv run python run.py
 
 test:
 	@echo "Running all tests..."
-	@pytest
+	@uv run pytest
 
 test-unit:
 	@echo "Running unit tests..."
-	@pytest tests/unit -v
+	@uv run pytest tests/unit -v
 
 test-integration:
 	@echo "Running integration tests..."
-	@pytest tests/integration -v
+	@uv run pytest tests/integration -v
 
 test-cov:
 	@echo "Running tests with coverage..."
-	@pytest --cov=src --cov-report=html --cov-report=term
+	@uv run pytest --cov=src --cov-report=html --cov-report=term
 	@echo "✓ Coverage report generated in htmlcov/index.html"
 
 clean:
@@ -59,9 +62,9 @@ clean:
 
 lint:
 	@echo "Running linters..."
-	@python -m pylint src/ || true
+	@uv run pylint src/ || true
 
 format:
 	@echo "Formatting code..."
-	@python -m black src/ tests/ || echo "Install black with: pip install black"
+	@uv run black src/ tests/
 	@echo "✓ Code formatted"

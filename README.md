@@ -231,15 +231,15 @@ The application uses [OpenRouter](https://openrouter.ai) as a unified gateway to
    cd slacklistener
    ```
 
-2. **Create a virtual environment**:
+2. **Install [uv](https://docs.astral.sh/uv/)** (if you don't have it):
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   # or: brew install uv
    ```
 
-3. **Install dependencies**:
+3. **Install dependencies** (creates `.venv/` automatically):
    ```bash
-   pip install -r requirements.txt
+   uv sync --frozen
    ```
 
 4. **Configure OpenRouter**:
@@ -409,7 +409,8 @@ slacklistener/
 │   └── config.example.yaml      # Example configuration
 ├── data/                        # Persistent data storage
 │   └── .gitkeep
-├── requirements.txt             # Python dependencies
+├── pyproject.toml              # Project metadata + dependencies (uv)
+├── uv.lock                     # Locked dependency versions
 ├── .env                         # Environment variables (not in git)
 ├── .env.example                 # Example environment file
 └── README.md                    # This file
@@ -490,12 +491,12 @@ No volume mounting for logs is required.
 ### Running in Development
 
 ```bash
-# Install development dependencies
-pip install -r requirements.txt
+# Install runtime + dev dependencies
+uv sync --frozen
 
 # Run with debug logging
 # Edit config/config.yaml and set: log_level: "DEBUG"
-python -m src.app
+uv run python -m src.app
 ```
 
 ### Adding New Features
@@ -513,7 +514,7 @@ The application includes comprehensive unit and integration tests using pytest.
 ```bash
 make install-dev
 # Or manually:
-pip install -r requirements-dev.txt
+uv sync --frozen
 ```
 
 #### Run Tests

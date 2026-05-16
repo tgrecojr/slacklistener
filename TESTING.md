@@ -2,6 +2,10 @@
 
 Comprehensive guide for testing the Slack Listener application.
 
+> **Note:** This project uses [uv](https://docs.astral.sh/uv/) for dependency and environment management.
+> When running test commands directly (not via `make`), prefix them with `uv run` — e.g. `uv run pytest tests/unit -v`.
+> The `make` targets already do this for you.
+
 ## Quick Start
 
 ```bash
@@ -349,16 +353,20 @@ To run tests in CI:
 
 ```yaml
 # .github/workflows/test.yml example
+- name: Install uv
+  uses: astral-sh/setup-uv@v6
+  with:
+    enable-cache: true
+    cache-dependency-glob: "uv.lock"
+
 - name: Install dependencies
-  run: |
-    pip install -r requirements.txt
-    pip install -r requirements-dev.txt
+  run: uv sync --frozen
 
 - name: Run tests
-  run: pytest --cov=src --cov-report=xml
+  run: uv run pytest --cov=src --cov-report=xml
 
 - name: Upload coverage
-  uses: codecov/codecov-action@v3
+  uses: codecov/codecov-action@v6
 ```
 
 ## Common Issues
