@@ -1,17 +1,11 @@
 # syntax=docker/dockerfile:1.24@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89
 
-# Build stage - resolve and install dependencies with uv
-FROM python:3.14-slim@sha256:a7185a8e40af01bf891414a4df16ef10fc6000cee460a404a13da9029fe41604 AS builder
+# Build stage - resolve and install dependencies with uv.
+# Chainguard's -dev image ships uv and gcc, so no extra apt installs are needed.
+FROM cgr.dev/chainguard/python:latest-dev@sha256:c1d503ebc5088bd0143673af0d02f2db31e53acc506ba5a8f4756c337a989d3f AS builder
 
-# Pull the uv binary from the official distroless image
-COPY --from=ghcr.io/astral-sh/uv:0.11@sha256:440fd6477af86a2f1b38080c539f1672cd22acb1b1a47e321dba5158ab08864d /uv /uvx /usr/local/bin/
-
-# Install build toolchain for any deps that ship sdists requiring C extensions
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        gcc \
-        libc6-dev && \
-    rm -rf /var/lib/apt/lists/*
+# Default user is nonroot; switch to root so we can write to /app during build.
+USER root
 
 WORKDIR /app
 
@@ -26,29 +20,35 @@ COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project
 
+# Pre-create runtime directories with nonroot ownership so the distroless
+# final stage (which has no shell) can receive them via COPY.
+RUN mkdir -p /scaffold/config /scaffold/data && \
+    chown -R 65532:65532 /scaffold
 
-# Final stage - runtime only
-FROM python:3.14-slim@sha256:a7185a8e40af01bf891414a4df16ef10fc6000cee460a404a13da9029fe41604
+
+# Final stage - distroless runtime.
+# Chainguard's runtime image is distroless and already runs as uid 65532 (nonroot).
+FROM cgr.dev/chainguard/python:latest@sha256:f960fea6d1fb1c0ad626558d9db323ff84468927ac37cd7fa889b512ba0dc1c9
+
+# Clear the upstream ENTRYPOINT (/usr/bin/python) so PATH-resolved "python" picks
+# up the venv interpreter and activates the venv's site-packages.
+ENTRYPOINT []
 
 WORKDIR /app
 
-# Copy the resolved virtualenv from the builder
-COPY --from=builder /app/.venv /app/.venv
+# Copy the resolved virtualenv from the builder, owned by the runtime nonroot user.
+COPY --from=builder --chown=65532:65532 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy application code
-COPY src/ ./src/
-COPY run.py .
+COPY --chown=65532:65532 src/ ./src/
+COPY --chown=65532:65532 run.py .
 
-# Create config directory (config.yaml should be mounted as volume)
-RUN mkdir -p config
-
-# Run as non-root user
-RUN useradd -m -u 1000 slackbot && \
-    chown -R slackbot:slackbot /app
-USER slackbot
+# Create config (mount target) and data (RSS state) directories owned by nonroot.
+COPY --from=builder --chown=65532:65532 /scaffold/config /app/config
+COPY --from=builder --chown=65532:65532 /scaffold/data /app/data
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import sys; sys.exit(0)"
+    CMD ["python", "-c", "import sys; sys.exit(0)"]
 
 CMD ["python", "run.py"]
