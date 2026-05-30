@@ -28,7 +28,7 @@ RUN mkdir -p /scaffold/config /scaffold/data && \
 
 # Final stage - distroless runtime.
 # Chainguard's runtime image is distroless and already runs as uid 65532 (nonroot).
-FROM cgr.dev/chainguard/python:latest@sha256:d418ff2362e75d3343bb6d59c33618a5b03430e04469a73c34cb8be9f98419db
+FROM cgr.dev/chainguard/python:latest@sha256:30ac20a34bae29023ae54b454e85fedb5cfb7de5f206dc73112bf8b0e3e3e190
 
 # Clear the upstream ENTRYPOINT (/usr/bin/python) so PATH-resolved "python" picks
 # up the venv interpreter and activates the venv's site-packages.
