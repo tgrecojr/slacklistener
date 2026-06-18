@@ -24,7 +24,7 @@ dev = [
     "responses==0.26.1",
     "moto==5.2.2",
     "black==26.5.1",
-    "pylint==4.0.5",
+    "pylint==4.0.6",
 ]
 
 [tool.uv]
