@@ -1,8 +1,8 @@
-# syntax=docker/dockerfile:1.24@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89
+# syntax=docker/dockerfile:1.25@sha256:0adf442eae370b6087e08edc7c50b552d80ddf261576f4ebd6421006b2461f12
 
 # Build stage - resolve and install dependencies with uv.
 # Chainguard's -dev image ships uv and gcc, so no extra apt installs are needed.
-FROM cgr.dev/chainguard/python:latest-dev@sha256:fa24a5125b01a963dc6fb23972a621a0e54b8195698c7d893d54e688e267e7b3 AS builder
+FROM cgr.dev/chainguard/python:latest-dev@sha256:a38c998396e846c009bcabfc70702f64205b8db1dde71c8c8e5e734213afb237 AS builder
 
 # Default user is nonroot; switch to root so we can write to /app during build.
 USER root
@@ -28,7 +28,7 @@ RUN mkdir -p /scaffold/config /scaffold/data && \
 
 # Final stage - distroless runtime.
 # Chainguard's runtime image is distroless and already runs as uid 65532 (nonroot).
-FROM cgr.dev/chainguard/python:latest@sha256:d418ff2362e75d3343bb6d59c33618a5b03430e04469a73c34cb8be9f98419db
+FROM cgr.dev/chainguard/python:latest@sha256:c6edbd621ec53f2c6dc7d0d9f3faf930e19af1a76241c0868b8b5da7cd4c9bdc
 
 # Clear the upstream ENTRYPOINT (/usr/bin/python) so PATH-resolved "python" picks
 # up the venv interpreter and activates the venv's site-packages.
