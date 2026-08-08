@@ -2,7 +2,7 @@
 
 # Build stage - resolve and install dependencies with uv.
 # Chainguard's -dev image ships uv and gcc, so no extra apt installs are needed.
-FROM cgr.dev/chainguard/python:latest-dev@sha256:7b79c054afd14f566d1d52ea1d4d037267ec8570efedbc6ead779d89ba943abe AS builder
+FROM cgr.dev/chainguard/python:latest-dev@sha256:bcb060368fde2886ac2a794c7790176b1b0c4a2398e07de107b6b97a40e44cb2 AS builder
 
 # Default user is nonroot; switch to root so we can write to /app during build.
 USER root
