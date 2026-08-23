@@ -134,7 +134,7 @@ class RSSFeedTool(Tool):
                 ts = datetime.fromisoformat(ts_str)
                 if ts >= cutoff:
                     pruned[article_id] = ts_str
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 # Keep entries with unparseable timestamps (safer default)
                 pruned[article_id] = ts_str
 
@@ -222,12 +222,12 @@ class RSSFeedTool(Tool):
         if hasattr(entry, "published_parsed") and entry.published_parsed:
             try:
                 return datetime(*entry.published_parsed[:6]).isoformat()
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 pass
         if hasattr(entry, "updated_parsed") and entry.updated_parsed:
             try:
                 return datetime(*entry.updated_parsed[:6]).isoformat()
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 pass
         return ""
 
