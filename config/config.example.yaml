@@ -27,6 +27,8 @@ channels:
       max_tokens: 1024
       temperature: 0.7
       # base_url: "https://openrouter.ai/api/v1"  # Optional, this is the default
+      # To route ALL LLM calls through an OpenAI-compatible gateway (e.g. LiteLLM),
+      # set LLM_BASE_URL in .env instead - it overrides base_url everywhere.
 
       # App attribution headers (optional - shown in OpenRouter console)
       # These defaults are used if not specified:

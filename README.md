@@ -215,6 +215,30 @@ The application uses [OpenRouter](https://openrouter.ai) as a unified gateway to
 - `openai/gpt-4-turbo` - Fast GPT-4
 - Many more at https://openrouter.ai/models
 
+### Routing Through a Local Gateway (`LLM_BASE_URL`)
+
+Because OpenRouter speaks the OpenAI-compatible API, the application can talk to any other OpenAI-compatible endpoint instead — for example a local [LiteLLM](https://docs.litellm.ai) proxy that adds prompt-injection screening, logging, or budgeting in front of your providers.
+
+Set the `LLM_BASE_URL` environment variable to redirect **all** LLM calls:
+
+```bash
+# .env
+LLM_BASE_URL=http://localhost:4000/v1
+```
+
+Behavior:
+
+- **Unset (default)**: all calls go to `https://openrouter.ai/api/v1`. Existing deployments need no changes.
+- **Set**: every channel and slash command uses this URL. It takes precedence over any `base_url` in `config.yaml` (a warning is logged if one was overridden) so a gateway cannot be bypassed per-channel. An empty value is treated as unset.
+- **Per-target routing without the env var**: leave `LLM_BASE_URL` unset and set `llm.base_url` on individual channels/commands in `config.yaml`.
+
+Things to know when pointing at a gateway:
+
+- **`OPENROUTER_API_KEY` holds the gateway's key.** The variable name is kept for backward compatibility, but its value is whatever the endpoint at `LLM_BASE_URL` expects (e.g. a LiteLLM virtual key or master key), not necessarily an OpenRouter key.
+- **Model names must exist on the gateway.** The `model` values in `config.yaml` are sent as-is, so the gateway must expose them (for LiteLLM, via its `model_list` or wildcard routing).
+- **From Docker, `localhost` is the container.** Use `http://host.docker.internal:4000/v1` on Docker Desktop, or the gateway's compose service name.
+- The startup log line `Initialized OpenRouter client with model: ..., base_url: ...` confirms where traffic is going.
+
 ## Prerequisites
 
 - Python 3.8 or higher
@@ -300,7 +324,11 @@ The application uses [OpenRouter](https://openrouter.ai) as a unified gateway to
    SLACK_BOT_TOKEN=xoxb-your-token
    SLACK_APP_TOKEN=xapp-your-token
    OPENROUTER_API_KEY=sk-or-v1-your-key
+   # Optional: route all LLM calls through an OpenAI-compatible gateway
+   # LLM_BASE_URL=http://localhost:4000/v1
    ```
+
+   See [Routing Through a Local Gateway](#routing-through-a-local-gateway-llm_base_url) for details on `LLM_BASE_URL`.
 
 2. **Application Configuration**:
    ```bash
@@ -356,10 +384,11 @@ channels:
 - `keywords`: List of keywords to trigger on (empty = all messages)
 - `case_sensitive`: Whether keyword matching is case-sensitive
 - `require_image`: Only respond to messages with images
-- `llm.api_key`: OpenRouter API key
-- `llm.model`: OpenRouter model identifier
+- `llm.api_key`: API key for the LLM endpoint (OpenRouter by default)
+- `llm.model`: Model identifier (OpenRouter format by default)
 - `llm.max_tokens`: Maximum tokens to generate
 - `llm.temperature`: Temperature for sampling (0-1)
+- `llm.base_url`: OpenAI-compatible API base URL (default: `https://openrouter.ai/api/v1`; overridden globally by the `LLM_BASE_URL` environment variable)
 - `system_prompt`: Instructions for the AI model
 - `tools`: List of tools to execute before LLM invocation (optional)
 - `response.thread_reply`: Reply in thread vs new message
@@ -431,6 +460,7 @@ slacklistener/
 2. Check API key has sufficient credits
 3. Ensure model name matches OpenRouter format (e.g., `anthropic/claude-3.5-sonnet`)
 4. Check OpenRouter status at https://openrouter.ai/activity
+5. If `LLM_BASE_URL` is set, confirm the gateway is reachable from where the app runs and exposes the configured model names (see [Routing Through a Local Gateway](#routing-through-a-local-gateway-llm_base_url))
 
 ### Socket Mode connection issues
 

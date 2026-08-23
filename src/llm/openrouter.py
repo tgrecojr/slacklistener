@@ -42,7 +42,8 @@ class OpenRouterClient:
             client_kwargs["timeout"] = timeout
         self.client = OpenAI(**client_kwargs)
         logger.info(
-            f"Initialized OpenRouter client with model: {model}, site: {site_name}"
+            f"Initialized OpenRouter client with model: {model}, "
+            f"base_url: {base_url}, site: {site_name}"
         )
 
     def generate_response(

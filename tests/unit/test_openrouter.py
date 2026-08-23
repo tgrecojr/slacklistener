@@ -37,3 +37,23 @@ class TestOpenRouterClientTimeout:
 
             call_kwargs = mock_openai_class.call_args.kwargs
             assert call_kwargs["timeout"] == timeout_val
+
+
+class TestOpenRouterClientBaseUrl:
+    """Tests for OpenRouterClient base_url handling."""
+
+    @patch("src.llm.openrouter.OpenAI")
+    def test_default_base_url_is_openrouter(self, mock_openai_class):
+        """Test that the OpenRouter URL is used when base_url is not given."""
+        OpenRouterClient(api_key="test-key")
+
+        call_kwargs = mock_openai_class.call_args.kwargs
+        assert call_kwargs["base_url"] == "https://openrouter.ai/api/v1"
+
+    @patch("src.llm.openrouter.OpenAI")
+    def test_custom_base_url_passed_to_openai_client(self, mock_openai_class):
+        """Test that a custom base_url (e.g. a LiteLLM gateway) reaches OpenAI()."""
+        OpenRouterClient(api_key="test-key", base_url="http://localhost:4000/v1")
+
+        call_kwargs = mock_openai_class.call_args.kwargs
+        assert call_kwargs["base_url"] == "http://localhost:4000/v1"

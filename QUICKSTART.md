@@ -56,6 +56,8 @@ OPENROUTER_API_KEY=sk-or-v1-your-openrouter-key-here
 4. Copy the API key (starts with `sk-or-`)
 5. Add to `.env` as `OPENROUTER_API_KEY`
 
+> **Using a local gateway instead?** Set `LLM_BASE_URL` in `.env` (e.g. `LLM_BASE_URL=http://localhost:4000/v1`) to send all LLM calls to an OpenAI-compatible proxy such as LiteLLM. In that case `OPENROUTER_API_KEY` holds the gateway's key. See the README section "Routing Through a Local Gateway" for details.
+
 ## 4. Get Channel IDs
 
 ### Method 1: From Slack Desktop/Web

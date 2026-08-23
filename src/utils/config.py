@@ -55,7 +55,11 @@ class LLMConfig(BaseModel):
     max_tokens: int = Field(default=1024, ge=1, le=100000)
     temperature: float = Field(default=0.7, ge=0.0, le=1.0)
     base_url: str = Field(
-        default="https://openrouter.ai/api/v1", description="OpenRouter API base URL"
+        default="https://openrouter.ai/api/v1",
+        description=(
+            "OpenAI-compatible API base URL. Overridden globally by the "
+            "LLM_BASE_URL environment variable when it is set."
+        ),
     )
 
     # App attribution headers
@@ -67,6 +71,24 @@ class LLMConfig(BaseModel):
         default="slacklistener",
         description="App name for OpenRouter attribution (shown in console)",
     )
+
+    @model_validator(mode="after")
+    def _apply_base_url_override(self) -> "LLMConfig":
+        """Route all LLM traffic through LLM_BASE_URL when it is set.
+
+        An empty or whitespace-only value is treated as unset. When set, it
+        takes precedence over any base_url given in the YAML config so that a
+        gateway (e.g. a LiteLLM proxy) cannot be bypassed per-channel.
+        """
+        override = os.getenv("LLM_BASE_URL", "").strip()
+        if not override:
+            return self
+        if "base_url" in self.model_fields_set and self.base_url != override:
+            logger.warning(
+                f"LLM_BASE_URL={override} overrides config base_url={self.base_url}"
+            )
+        self.base_url = override
+        return self
 
 
 class ResponseConfig(BaseModel):
