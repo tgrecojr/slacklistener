@@ -2,7 +2,7 @@
 
 # Build stage - resolve and install dependencies with uv.
 # Chainguard's -dev image ships uv and gcc, so no extra apt installs are needed.
-FROM cgr.dev/chainguard/python:latest-dev@sha256:aa8fd2447b8b52922db57deb3894b622c3229387aaaec5934d64b85dbff6eb17 AS builder
+FROM cgr.dev/chainguard/python:latest-dev@sha256:aa89119db7f7fb4a6628ac82e2c38404cc64cd56ccd858d2c78646776b3fffef AS builder
 
 # Default user is nonroot; switch to root so we can write to /app during build.
 USER root
@@ -28,7 +28,7 @@ RUN mkdir -p /scaffold/config /scaffold/data && \
 
 # Final stage - distroless runtime.
 # Chainguard's runtime image is distroless and already runs as uid 65532 (nonroot).
-FROM cgr.dev/chainguard/python:latest@sha256:ee37f5e4fb445732409626797dccb6f2a6337872def2bab48729ee61b335fa77
+FROM cgr.dev/chainguard/python:latest@sha256:115532a106aff6e820cd637809edd0c9239f2269d46fb9937cac703cc4d101e5
 
 # Clear the upstream ENTRYPOINT (/usr/bin/python) so PATH-resolved "python" picks
 # up the venv interpreter and activates the venv's site-packages.
