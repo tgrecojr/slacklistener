@@ -52,7 +52,7 @@ class TestOpenRouterClientBaseUrl:
 
     @patch("src.llm.openrouter.OpenAI")
     def test_custom_base_url_passed_to_openai_client(self, mock_openai_class):
-        """Test that a custom base_url (e.g. a LiteLLM gateway) reaches OpenAI()."""
+        """Test that a custom base_url is passed through to OpenAI()."""
         OpenRouterClient(api_key="test-key", base_url="http://localhost:4000/v1")
 
         call_kwargs = mock_openai_class.call_args.kwargs
