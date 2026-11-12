@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Slack bot using Slack Bolt + OpenRouter with configurable tools."
 readme = "README.md"
 requires-python = ">=3.14"
+license = "MIT"
 dependencies = [
     "slack-bolt>=1.20.1",
     "slack-sdk>=3.33.4",
