@@ -583,9 +583,13 @@ Use fixtures from `conftest.py` for common test data.
 - Regularly rotate API keys and Slack tokens
 - Review which channels the bot has access to
 
+## Contributing
+
+Issues and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
+
 ## License
 
-[Your License Here]
+Released under the [MIT License](LICENSE).
 
 ## Support
 
